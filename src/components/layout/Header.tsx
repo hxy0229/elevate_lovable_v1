@@ -14,6 +14,7 @@ const Header = () => {
     { path: '/packages', label: t('nav.packages') },
     { path: '/rooms', label: t('nav.rooms') },
     { path: '/sessions', label: t('nav.sessions') },
+    { path: '/lessons', label: t('nav.lessons') },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -23,15 +24,15 @@ const Header = () => {
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-sm border-b border-border">
+    <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-xl border-b border-border">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 group">
+          <Link to="/" className="flex items-center gap-3 group">
             <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center group-hover:scale-105 transition-transform">
-              <Music className="w-6 h-6 text-primary-foreground" />
+              <Music className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="font-display font-bold text-xl text-foreground hidden sm:block">
+            <span className="font-display font-semibold text-lg text-foreground hidden sm:block">
               {language === 'en' ? 'Music Center' : '音乐中心'}
             </span>
           </Link>
@@ -42,7 +43,7 @@ const Header = () => {
               <Link
                 key={link.path}
                 to={link.path}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
                   isActive(link.path)
                     ? 'bg-primary text-primary-foreground'
                     : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
@@ -60,17 +61,17 @@ const Header = () => {
               variant="ghost"
               size="sm"
               onClick={toggleLanguage}
-              className="flex items-center gap-1"
+              className="flex items-center gap-1.5 rounded-full"
             >
               <Globe className="w-4 h-4" />
-              <span className="hidden sm:inline">
+              <span className="hidden sm:inline text-sm">
                 {language === 'en' ? '中文' : 'EN'}
               </span>
             </Button>
 
             {/* Login Button */}
             <Link to="/auth">
-              <Button variant="default" size="sm" className="rounded-xl">
+              <Button variant="default" size="sm" className="rounded-full px-5">
                 {t('nav.login')}
               </Button>
             </Link>

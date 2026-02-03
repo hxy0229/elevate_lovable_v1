@@ -1,53 +1,56 @@
+import { useState } from 'react';
 import { Calendar, Clock, Users, Mic2, Guitar, Drum, Music, Piano } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useLanguage } from '@/contexts/LanguageContext';
 import Layout from '@/components/layout/Layout';
 
 const Sessions = () => {
   const { t, language } = useLanguage();
+  const [selectedRoles, setSelectedRoles] = useState<Record<number, string[]>>({});
 
+  // Tuesday and Thursday sessions
   const sessions = [
     {
       id: 1,
-      date: '2025-02-08',
-      time: '19:00 - 22:00',
-      theme: language === 'en' ? 'Rock Night' : '摇滚之夜',
-      maxParticipants: 12,
-      currentParticipants: 8,
-      roles: ['vocal', 'guitar', 'drums', 'bass'],
+      day: t('sessions.tuesday'),
+      dayShort: language === 'en' ? 'Tue' : '周二',
+      time: '18:00 - 19:30',
+      type: 'solo-vocal',
+      name: t('sessions.soloVocal'),
+      nameCn: '独唱练习',
+      maxParticipants: 8,
+      currentParticipants: 5,
+      availableRoles: ['vocal'],
       status: 'open',
     },
     {
       id: 2,
-      date: '2025-02-15',
-      time: '19:00 - 22:00',
-      theme: language === 'en' ? 'Pop Classics' : '流行经典',
+      day: t('sessions.tuesday'),
+      dayShort: language === 'en' ? 'Tue' : '周二',
+      time: '19:30 - 22:00',
+      type: 'band',
+      name: t('sessions.bandSession'),
+      nameCn: '乐队排练',
       maxParticipants: 15,
-      currentParticipants: 15,
-      roles: ['vocal', 'guitar', 'keyboard', 'bass'],
-      status: 'full',
+      currentParticipants: 10,
+      availableRoles: ['vocal', 'guitar', 'drums', 'bass', 'keyboard'],
+      status: 'open',
     },
     {
       id: 3,
-      date: '2025-02-22',
-      time: '19:00 - 22:00',
-      theme: language === 'en' ? 'Jazz Evening' : '爵士之夜',
-      maxParticipants: 10,
-      currentParticipants: 5,
-      roles: ['vocal', 'guitar', 'keyboard', 'bass', 'drums'],
-      status: 'open',
-    },
-    {
-      id: 4,
-      date: '2025-03-01',
-      time: '19:00 - 22:00',
-      theme: language === 'en' ? 'Acoustic Session' : '原声专场',
-      maxParticipants: 8,
-      currentParticipants: 3,
-      roles: ['vocal', 'guitar'],
-      status: 'open',
+      day: t('sessions.thursday'),
+      dayShort: language === 'en' ? 'Thu' : '周四',
+      time: '19:30 - 22:00',
+      type: 'band',
+      name: t('sessions.bandSession'),
+      nameCn: '乐队排练',
+      maxParticipants: 15,
+      currentParticipants: 15,
+      availableRoles: ['vocal', 'guitar', 'drums', 'bass', 'keyboard'],
+      status: 'full',
     },
   ];
 
@@ -72,58 +75,77 @@ const Sessions = () => {
     return t(`sessions.${role}`);
   };
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    if (language === 'zh') {
-      return date.toLocaleDateString('zh-CN', {
-        month: 'long',
-        day: 'numeric',
-        weekday: 'long',
-      });
-    }
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      weekday: 'short',
+  const handleRoleToggle = (sessionId: number, role: string) => {
+    setSelectedRoles((prev) => {
+      const current = prev[sessionId] || [];
+      if (current.includes(role)) {
+        return { ...prev, [sessionId]: current.filter((r) => r !== role) };
+      } else {
+        return { ...prev, [sessionId]: [...current, role] };
+      }
     });
+  };
+
+  const getNextDate = (dayName: string) => {
+    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const today = new Date();
+    const targetDay = days.indexOf(dayName.toLowerCase());
+    const currentDay = today.getDay();
+    let daysUntil = targetDay - currentDay;
+    if (daysUntil <= 0) daysUntil += 7;
+    const nextDate = new Date(today);
+    nextDate.setDate(today.getDate() + daysUntil);
+    
+    if (language === 'zh') {
+      return nextDate.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric' });
+    }
+    return nextDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
   return (
     <Layout>
-      <section className="py-16 lg:py-24">
+      <section className="py-20 lg:py-28">
         <div className="container mx-auto px-4">
           {/* Header */}
-          <div className="text-center max-w-2xl mx-auto mb-12">
-            <h1 className="font-display text-4xl md:text-5xl font-bold mb-4">
+          <div className="text-center max-w-2xl mx-auto mb-16">
+            <h1 className="font-display text-4xl md:text-5xl font-bold mb-4 text-gradient">
               {t('sessions.title')}
             </h1>
             <p className="text-xl text-muted-foreground">
               {t('sessions.subtitle')}
             </p>
+            <div className="w-16 h-1 bg-primary mx-auto rounded-full mt-6" />
           </div>
 
           {/* Session Cards */}
-          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+          <div className="max-w-3xl mx-auto space-y-6">
             {sessions.map((session) => (
               <Card
                 key={session.id}
-                className={`overflow-hidden transition-all duration-300 hover:shadow-lg ${
-                  session.status === 'full' ? 'opacity-75' : ''
+                className={`overflow-hidden transition-all duration-300 border-border ${
+                  session.status === 'full' ? 'opacity-75' : 'hover:border-primary/50'
                 }`}
               >
-                <CardHeader className="bg-gradient-to-r from-primary/10 to-accent/10">
+                <CardHeader className="bg-secondary/50 border-b border-border">
                   <div className="flex justify-between items-start">
                     <div>
-                      <CardTitle className="font-display text-xl mb-1">
-                        {session.theme}
-                      </CardTitle>
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Calendar className="w-4 h-4" />
-                        <span>{formatDate(session.date)}</span>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge variant="outline" className="border-primary/50 text-primary">
+                          {session.day}
+                        </Badge>
+                        <span className="text-sm text-muted-foreground">
+                          {getNextDate(session.day.toLowerCase().includes('tue') || session.day.includes('二') ? 'tuesday' : 'thursday')}
+                        </span>
                       </div>
+                      <CardTitle className="font-display text-xl">
+                        {session.type === 'solo-vocal' && '🎤 '}
+                        {session.type === 'band' && '🎸 '}
+                        {session.name}
+                      </CardTitle>
                     </div>
                     <Badge
                       variant={session.status === 'open' ? 'default' : 'secondary'}
+                      className={session.status === 'open' ? '' : 'bg-muted text-muted-foreground'}
                     >
                       {session.status === 'open'
                         ? `${session.maxParticipants - session.currentParticipants} ${t('sessions.spots')}`
@@ -132,41 +154,54 @@ const Sessions = () => {
                   </div>
                 </CardHeader>
                 <CardContent className="p-6">
-                  <div className="flex items-center gap-4 mb-4 text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Clock className="w-4 h-4" />
+                  <div className="flex items-center gap-6 mb-6 text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-primary" />
                       <span>{session.time}</span>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Users className="w-4 h-4" />
+                    <div className="flex items-center gap-2">
+                      <Users className="w-4 h-4 text-primary" />
                       <span>
                         {session.currentParticipants}/{session.maxParticipants}
                       </span>
                     </div>
                   </div>
 
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      {t('sessions.roles')}:
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {session.roles.map((role) => (
-                        <div
-                          key={role}
-                          className="flex items-center gap-1 px-3 py-1 bg-secondary rounded-lg text-sm"
-                        >
-                          {getRoleIcon(role)}
-                          <span>{getRoleLabel(role)}</span>
-                        </div>
-                      ))}
+                  {session.status === 'open' && (
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        {t('sessions.chooseRole')}:
+                      </p>
+                      <div className="flex flex-wrap gap-3">
+                        {session.availableRoles.map((role) => (
+                          <label
+                            key={role}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg border cursor-pointer transition-all ${
+                              (selectedRoles[session.id] || []).includes(role)
+                                ? 'bg-primary/10 border-primary text-foreground'
+                                : 'bg-secondary border-border text-muted-foreground hover:border-primary/50'
+                            }`}
+                          >
+                            <Checkbox
+                              checked={(selectedRoles[session.id] || []).includes(role)}
+                              onCheckedChange={() => handleRoleToggle(session.id, role)}
+                              className="hidden"
+                            />
+                            {getRoleIcon(role)}
+                            <span className="text-sm">{getRoleLabel(role)}</span>
+                          </label>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </CardContent>
                 <CardFooter className="p-6 pt-0">
                   <Button
-                    className="w-full rounded-xl"
+                    className={`w-full rounded-full h-12 font-semibold ${
+                      session.status === 'open' ? 'gold-glow' : ''
+                    }`}
                     disabled={session.status === 'full'}
-                    variant={session.status === 'full' ? 'outline' : 'default'}
+                    variant={session.status === 'full' ? 'secondary' : 'default'}
                   >
                     {session.status === 'full'
                       ? t('sessions.waitlist')

@@ -1,195 +1,202 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Music, Mail, Lock, User, ArrowLeft } from 'lucide-react';
+import { Music, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useLanguage } from '@/contexts/LanguageContext';
+import Layout from '@/components/layout/Layout';
 
 const Auth = () => {
-  const { t, language } = useLanguage();
-  const [memberType, setMemberType] = useState<string>('singer');
-  const [instrument, setInstrument] = useState<string>('');
+  const { t } = useLanguage();
+  const [isLogin, setIsLogin] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
+  
+  // Role selection - can be both
+  const [isSinger, setIsSinger] = useState(false);
+  const [isMusician, setIsMusician] = useState(false);
+  
+  // Instruments selection
+  const [instruments, setInstruments] = useState<string[]>([]);
+
+  const toggleInstrument = (instrument: string) => {
+    setInstruments((prev) =>
+      prev.includes(instrument)
+        ? prev.filter((i) => i !== instrument)
+        : [...prev, instrument]
+    );
+  };
+
+  const instrumentOptions = [
+    { id: 'guitar', label: t('auth.guitar') },
+    { id: 'drums', label: t('auth.drums') },
+    { id: 'bass', label: t('auth.bass') },
+    { id: 'keyboard', label: t('auth.keyboard') },
+  ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-cream via-background to-cream-dark flex items-center justify-center p-4">
-      {/* Background decoration */}
-      <div className="absolute top-20 right-10 w-64 h-64 bg-primary/10 rounded-full blur-3xl -z-10" />
-      <div className="absolute bottom-10 left-10 w-48 h-48 bg-accent/10 rounded-full blur-3xl -z-10" />
+    <Layout>
+      <section className="py-20 lg:py-28">
+        <div className="container mx-auto px-4">
+          <div className="max-w-md mx-auto">
+            <Card className="border-border bg-card">
+              <CardHeader className="text-center pb-6">
+                <div className="w-16 h-16 rounded-2xl bg-secondary border border-border flex items-center justify-center mx-auto mb-6">
+                  <Music className="w-8 h-8 text-primary" />
+                </div>
+                <CardTitle className="font-display text-2xl">
+                  {isLogin ? t('auth.login') : t('auth.signup')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="email">{t('auth.email')}</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="you@example.com"
+                    className="rounded-xl h-12 bg-secondary border-border"
+                  />
+                </div>
 
-      <div className="w-full max-w-md">
-        {/* Back to home */}
-        <Link
-          to="/"
-          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          {t('common.back')}
-        </Link>
-
-        <Card className="border-border/50 shadow-xl">
-          <CardHeader className="text-center pb-2">
-            <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center mx-auto mb-4">
-              <Music className="w-8 h-8 text-primary-foreground" />
-            </div>
-            <CardTitle className="font-display text-2xl">
-              {language === 'en' ? 'Music Center' : '音乐中心'}
-            </CardTitle>
-            <CardDescription>
-              {language === 'en'
-                ? 'Join our music community'
-                : '加入我们的音乐社区'}
-            </CardDescription>
-          </CardHeader>
-
-          <CardContent>
-            <Tabs defaultValue="login" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="login" className="rounded-xl">
-                  {t('auth.login')}
-                </TabsTrigger>
-                <TabsTrigger value="signup" className="rounded-xl">
-                  {t('auth.signup')}
-                </TabsTrigger>
-              </TabsList>
-
-              {/* Login Tab */}
-              <TabsContent value="login">
-                <form className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="login-email">{t('auth.email')}</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        id="login-email"
-                        type="email"
-                        placeholder="your@email.com"
-                        className="pl-10 rounded-xl"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="login-password">{t('auth.password')}</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        id="login-password"
-                        type="password"
-                        placeholder="••••••••"
-                        className="pl-10 rounded-xl"
-                      />
-                    </div>
-                  </div>
-                  <div className="text-right">
+                <div className="space-y-2">
+                  <Label htmlFor="password">{t('auth.password')}</Label>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      className="rounded-xl h-12 bg-secondary border-border pr-10"
+                    />
                     <button
                       type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="w-5 h-5" />
+                      ) : (
+                        <Eye className="w-5 h-5" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {!isLogin && (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="confirmPassword">{t('auth.confirmPassword')}</Label>
+                      <Input
+                        id="confirmPassword"
+                        type="password"
+                        placeholder="••••••••"
+                        className="rounded-xl h-12 bg-secondary border-border"
+                      />
+                    </div>
+
+                    {/* Role Selection - Can be both */}
+                    <div className="space-y-3">
+                      <Label>{t('auth.roles')}</Label>
+                      <p className="text-xs text-muted-foreground">{t('auth.selectMultiple')}</p>
+                      <div className="flex gap-3">
+                        <label
+                          className={`flex-1 flex items-center justify-center gap-2 p-4 rounded-xl border cursor-pointer transition-all ${
+                            isSinger
+                              ? 'bg-primary/10 border-primary text-foreground'
+                              : 'bg-secondary border-border text-muted-foreground hover:border-primary/50'
+                          }`}
+                        >
+                          <Checkbox
+                            checked={isSinger}
+                            onCheckedChange={(checked) => setIsSinger(!!checked)}
+                            className="hidden"
+                          />
+                          <span>🎤</span>
+                          <span className="font-medium">{t('auth.singer')}</span>
+                        </label>
+                        <label
+                          className={`flex-1 flex items-center justify-center gap-2 p-4 rounded-xl border cursor-pointer transition-all ${
+                            isMusician
+                              ? 'bg-primary/10 border-primary text-foreground'
+                              : 'bg-secondary border-border text-muted-foreground hover:border-primary/50'
+                          }`}
+                        >
+                          <Checkbox
+                            checked={isMusician}
+                            onCheckedChange={(checked) => setIsMusician(!!checked)}
+                            className="hidden"
+                          />
+                          <span>🎸</span>
+                          <span className="font-medium">{t('auth.musician')}</span>
+                        </label>
+                      </div>
+                      <p className="text-xs text-muted-foreground text-center">
+                        {t('auth.roleNote')}
+                      </p>
+                    </div>
+
+                    {/* Instruments - Show if musician selected */}
+                    {isMusician && (
+                      <div className="space-y-3">
+                        <Label>{t('auth.instruments')}</Label>
+                        <div className="grid grid-cols-2 gap-3">
+                          {instrumentOptions.map((instrument) => (
+                            <label
+                              key={instrument.id}
+                              className={`flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer transition-all ${
+                                instruments.includes(instrument.id)
+                                  ? 'bg-primary/10 border-primary text-foreground'
+                                  : 'bg-secondary border-border text-muted-foreground hover:border-primary/50'
+                              }`}
+                            >
+                              <Checkbox
+                                checked={instruments.includes(instrument.id)}
+                                onCheckedChange={() => toggleInstrument(instrument.id)}
+                                className="hidden"
+                              />
+                              <span className="text-sm font-medium">{instrument.label}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {isLogin && (
+                  <div className="text-right">
+                    <Link
+                      to="#"
                       className="text-sm text-primary hover:underline"
                     >
                       {t('auth.forgotPassword')}
-                    </button>
+                    </Link>
                   </div>
-                  <Button type="submit" className="w-full rounded-xl">
-                    {t('auth.login')}
-                  </Button>
-                </form>
-              </TabsContent>
+                )}
 
-              {/* Signup Tab */}
-              <TabsContent value="signup">
-                <form className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-email">{t('auth.email')}</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        id="signup-email"
-                        type="email"
-                        placeholder="your@email.com"
-                        className="pl-10 rounded-xl"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-password">{t('auth.password')}</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        id="signup-password"
-                        type="password"
-                        placeholder="••••••••"
-                        className="pl-10 rounded-xl"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-confirm">{t('auth.confirmPassword')}</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        id="signup-confirm"
-                        type="password"
-                        placeholder="••••••••"
-                        className="pl-10 rounded-xl"
-                      />
-                    </div>
-                  </div>
+                <Button className="w-full rounded-full h-12 font-semibold gold-glow">
+                  {isLogin ? t('auth.login') : t('auth.signup')}
+                </Button>
 
-                  {/* Member Type Selection */}
-                  <div className="space-y-2">
-                    <Label>{t('auth.memberType')}</Label>
-                    <RadioGroup
-                      value={memberType}
-                      onValueChange={setMemberType}
-                      className="grid grid-cols-2 gap-4"
-                    >
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="singer" id="singer" />
-                        <Label htmlFor="singer" className="cursor-pointer">
-                          {t('auth.singer')}
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="musician" id="musician" />
-                        <Label htmlFor="musician" className="cursor-pointer">
-                          {t('auth.musician')}
-                        </Label>
-                      </div>
-                    </RadioGroup>
-                  </div>
-
-                  {/* Instrument Selection (for musicians) */}
-                  {memberType === 'musician' && (
-                    <div className="space-y-2 animate-fade-in">
-                      <Label>{t('auth.instrument')}</Label>
-                      <Select value={instrument} onValueChange={setInstrument}>
-                        <SelectTrigger className="rounded-xl">
-                          <SelectValue placeholder={t('auth.instrument')} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="guitar">{t('auth.guitar')}</SelectItem>
-                          <SelectItem value="drums">{t('auth.drums')}</SelectItem>
-                          <SelectItem value="bass">{t('auth.bass')}</SelectItem>
-                          <SelectItem value="keyboard">{t('auth.keyboard')}</SelectItem>
-                          <SelectItem value="multi">{t('auth.multi')}</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-
-                  <Button type="submit" className="w-full rounded-xl">
-                    {t('auth.signup')}
-                  </Button>
-                </form>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+                <div className="text-center">
+                  <span className="text-muted-foreground text-sm">
+                    {isLogin ? t('auth.noAccount') : t('auth.hasAccount')}{' '}
+                  </span>
+                  <button
+                    onClick={() => setIsLogin(!isLogin)}
+                    className="text-primary hover:underline text-sm font-medium"
+                  >
+                    {isLogin ? t('auth.signup') : t('auth.login')}
+                  </button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+    </Layout>
   );
 };
 
