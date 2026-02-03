@@ -1,18 +1,48 @@
 import { useState } from 'react';
-import { Calendar, Clock, Users, Mic2, Guitar, Drum, Music, Piano } from 'lucide-react';
+import { Calendar, Clock, Users, Mic2, Guitar, Drum, Music, Piano, ListMusic } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Separator } from '@/components/ui/separator';
 import { useLanguage } from '@/contexts/LanguageContext';
 import Layout from '@/components/layout/Layout';
+
+interface Registration {
+  name: string;
+  role: string;
+}
+
+interface SongEntry {
+  order: number;
+  singer: string;
+  songKey: string;
+  songTitle: string;
+  artist: string;
+}
+
+interface Session {
+  id: number;
+  day: string;
+  dayShort: string;
+  time: string;
+  type: string;
+  name: string;
+  nameCn: string;
+  maxParticipants: number;
+  currentParticipants: number;
+  availableRoles: string[];
+  status: string;
+  registrations: Registration[];
+  songList: SongEntry[];
+}
 
 const Sessions = () => {
   const { t, language } = useLanguage();
   const [selectedRoles, setSelectedRoles] = useState<Record<number, string[]>>({});
 
-  // Tuesday and Thursday sessions
-  const sessions = [
+  // Tuesday and Thursday sessions with registrations and song lists
+  const sessions: Session[] = [
     {
       id: 1,
       day: t('sessions.tuesday'),
@@ -25,6 +55,20 @@ const Sessions = () => {
       currentParticipants: 5,
       availableRoles: ['vocal'],
       status: 'open',
+      registrations: [
+        { name: 'Lily', role: 'vocal' },
+        { name: 'Sarah', role: 'vocal' },
+        { name: 'Mike', role: 'vocal' },
+        { name: 'Jenny', role: 'vocal' },
+        { name: 'Tom', role: 'vocal' },
+      ],
+      songList: [
+        { order: 1, singer: 'Lily', songKey: 'C调', songTitle: '我愿意', artist: '王菲' },
+        { order: 2, singer: 'Sarah', songKey: 'G调', songTitle: '遇见', artist: '孙燕姿' },
+        { order: 3, singer: 'Mike', songKey: 'D调', songTitle: '童话', artist: '光良' },
+        { order: 4, singer: 'Jenny', songKey: 'A调', songTitle: '匆匆那年', artist: '王菲' },
+        { order: 5, singer: 'Tom', songKey: 'E调', songTitle: '那些年', artist: '胡夏' },
+      ],
     },
     {
       id: 2,
@@ -38,6 +82,23 @@ const Sessions = () => {
       currentParticipants: 10,
       availableRoles: ['vocal', 'guitar', 'drums', 'bass', 'keyboard'],
       status: 'open',
+      registrations: [
+        { name: 'Lily', role: 'vocal' },
+        { name: 'Danny', role: 'guitar' },
+        { name: 'Alex', role: 'drums' },
+        { name: 'Sam', role: 'bass' },
+        { name: 'Chris', role: 'keyboard' },
+        { name: 'Emma', role: 'vocal' },
+        { name: 'Kevin', role: 'guitar' },
+        { name: 'Rachel', role: 'vocal' },
+        { name: 'Jason', role: 'drums' },
+        { name: 'Nina', role: 'keyboard' },
+      ],
+      songList: [
+        { order: 1, singer: 'Lily', songKey: 'C调', songTitle: '海阔天空', artist: 'Beyond' },
+        { order: 2, singer: 'Emma', songKey: 'G调', songTitle: '光辉岁月', artist: 'Beyond' },
+        { order: 3, singer: 'Rachel', songKey: 'D调', songTitle: '真的爱你', artist: 'Beyond' },
+      ],
     },
     {
       id: 3,
@@ -51,6 +112,30 @@ const Sessions = () => {
       currentParticipants: 15,
       availableRoles: ['vocal', 'guitar', 'drums', 'bass', 'keyboard'],
       status: 'full',
+      registrations: [
+        { name: 'John', role: 'vocal' },
+        { name: 'Peter', role: 'guitar' },
+        { name: 'David', role: 'drums' },
+        { name: 'Michael', role: 'bass' },
+        { name: 'Steven', role: 'keyboard' },
+        { name: 'Linda', role: 'vocal' },
+        { name: 'Amy', role: 'guitar' },
+        { name: 'Susan', role: 'vocal' },
+        { name: 'Brian', role: 'drums' },
+        { name: 'Eric', role: 'keyboard' },
+        { name: 'Kate', role: 'vocal' },
+        { name: 'Paul', role: 'guitar' },
+        { name: 'Mark', role: 'bass' },
+        { name: 'Lisa', role: 'vocal' },
+        { name: 'Joe', role: 'keyboard' },
+      ],
+      songList: [
+        { order: 1, singer: 'John', songKey: 'E调', songTitle: '倔强', artist: '五月天' },
+        { order: 2, singer: 'Linda', songKey: 'C调', songTitle: '知足', artist: '五月天' },
+        { order: 3, singer: 'Susan', songKey: 'G调', songTitle: '温柔', artist: '五月天' },
+        { order: 4, singer: 'Kate', songKey: 'D调', songTitle: '突然好想你', artist: '五月天' },
+        { order: 5, singer: 'Lisa', songKey: 'A调', songTitle: '离开地球表面', artist: '五月天' },
+      ],
     },
   ];
 
@@ -153,8 +238,8 @@ const Sessions = () => {
                     </Badge>
                   </div>
                 </CardHeader>
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-6 mb-6 text-muted-foreground">
+                <CardContent className="p-6 space-y-6">
+                  <div className="flex items-center gap-6 text-muted-foreground">
                     <div className="flex items-center gap-2">
                       <Clock className="w-4 h-4 text-primary" />
                       <span>{session.time}</span>
@@ -166,6 +251,64 @@ const Sessions = () => {
                       </span>
                     </div>
                   </div>
+
+                  {/* Registered Participants */}
+                  {session.registrations.length > 0 && (
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                        <Users className="w-4 h-4 text-primary" />
+                        {language === 'en' ? 'Registered Participants' : '已报名成员'}
+                      </h4>
+                      <div className="flex flex-wrap gap-2">
+                        {session.registrations.map((reg, idx) => (
+                          <div
+                            key={idx}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary/50 border border-border text-sm"
+                          >
+                            {getRoleIcon(reg.role)}
+                            <span className="text-foreground">{reg.name}</span>
+                            <span className="text-muted-foreground">- {getRoleLabel(reg.role)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Song List */}
+                  {session.songList.length > 0 && (
+                    <div className="space-y-3">
+                      <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                        <ListMusic className="w-4 h-4 text-primary" />
+                        {language === 'en' ? 'Song List' : '歌曲列表'}
+                      </h4>
+                      <div className="bg-secondary/30 rounded-lg border border-border overflow-hidden">
+                        <div className="divide-y divide-border">
+                          {session.songList.map((song) => (
+                            <div
+                              key={song.order}
+                              className="flex items-center gap-3 px-4 py-3 hover:bg-secondary/50 transition-colors"
+                            >
+                              <span className="w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold flex items-center justify-center">
+                                {song.order}
+                              </span>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-medium text-foreground">{song.singer}</span>
+                                  <span className="text-muted-foreground">-</span>
+                                  <Badge variant="outline" className="text-xs border-primary/50 text-primary">
+                                    {song.songKey}
+                                  </Badge>
+                                  <span className="text-foreground">{song.artist}《{song.songTitle}》</span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <Separator className="bg-border" />
 
                   {session.status === 'open' && (
                     <div>
