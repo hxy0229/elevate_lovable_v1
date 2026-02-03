@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import Packages from "./pages/Packages";
 import Rooms from "./pages/Rooms";
 import Sessions from "./pages/Sessions";
+import Lessons from "./pages/Lessons";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -26,6 +27,7 @@ const App = () => (
             <Route path="/packages" element={<Packages />} />
             <Route path="/rooms" element={<Rooms />} />
             <Route path="/sessions" element={<Sessions />} />
+            <Route path="/lessons" element={<Lessons />} />
             <Route path="/auth" element={<Auth />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
