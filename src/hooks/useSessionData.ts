@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 export interface SessionRow {
   id: string;
@@ -54,24 +55,22 @@ export function useSessionData() {
   const [registrations, setRegistrations] = useState<RegistrationRow[]>([]);
   const [songs, setSongs] = useState<SongRow[]>([]);
   const [contents, setContents] = useState<ContentRow[]>([]);
-  const [user, setUser] = useState<any>(null);
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   const fetchAll = async () => {
     setLoading(true);
-    const [sessRes, regRes, songRes, contentRes, authRes] = await Promise.all([
+    const [sessRes, regRes, songRes, contentRes] = await Promise.all([
       supabase.from('sessions').select('*').order('day_of_week').order('start_time'),
       supabase.from('session_registrations').select('*'),
       supabase.from('session_songs').select('*').order('sort_order'),
       supabase.from('session_content').select('*').order('uploaded_at', { ascending: false }),
-      supabase.auth.getUser(),
     ]);
     if (sessRes.data) setSessions(sessRes.data as any);
     if (regRes.data) setRegistrations(regRes.data as any);
     if (songRes.data) setSongs(songRes.data as any);
     if (contentRes.data) setContents(contentRes.data as any);
-    setUser(authRes.data?.user ?? null);
     setLoading(false);
   };
 

@@ -1,13 +1,16 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, Music, Globe } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Menu, X, Music, Globe, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { language, setLanguage, t } = useLanguage();
+  const { user, signOut } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
 
   const navLinks = [
     { path: '/', label: t('nav.home') },
@@ -18,16 +21,17 @@ const Header = () => {
   ];
 
   const isActive = (path: string) => location.pathname === path;
+  const toggleLanguage = () => setLanguage(language === 'en' ? 'zh' : 'en');
 
-  const toggleLanguage = () => {
-    setLanguage(language === 'en' ? 'zh' : 'en');
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
   };
 
   return (
     <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-xl border-b border-border">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
           <Link to="/" className="flex items-center gap-3 group">
             <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center group-hover:scale-105 transition-transform">
               <Music className="w-5 h-5 text-primary-foreground" />
@@ -37,7 +41,6 @@ const Header = () => {
             </span>
           </Link>
 
-          {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-1">
             {navLinks.map((link) => (
               <Link
@@ -54,41 +57,31 @@ const Header = () => {
             ))}
           </nav>
 
-          {/* Right side actions */}
           <div className="flex items-center gap-2">
-            {/* Language Toggle */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={toggleLanguage}
-              className="flex items-center gap-1.5 rounded-full"
-            >
+            <Button variant="ghost" size="sm" onClick={toggleLanguage} className="flex items-center gap-1.5 rounded-full">
               <Globe className="w-4 h-4" />
-              <span className="hidden sm:inline text-sm">
-                {language === 'en' ? '中文' : 'EN'}
-              </span>
+              <span className="hidden sm:inline text-sm">{language === 'en' ? '中文' : 'EN'}</span>
             </Button>
 
-            {/* Login Button */}
-            <Link to="/auth">
-              <Button variant="default" size="sm" className="rounded-full px-5">
-                {t('nav.login')}
+            {user ? (
+              <Button variant="ghost" size="sm" onClick={handleSignOut} className="rounded-full px-4 gap-1.5">
+                <LogOut className="w-4 h-4" />
+                <span className="hidden sm:inline">{t('nav.logout')}</span>
               </Button>
-            </Link>
+            ) : (
+              <Link to="/auth">
+                <Button variant="default" size="sm" className="rounded-full px-5">
+                  {t('nav.login')}
+                </Button>
+              </Link>
+            )}
 
-            {/* Mobile menu button */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="md:hidden"
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-            >
+            <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsMenuOpen(!isMenuOpen)}>
               {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </Button>
           </div>
         </div>
 
-        {/* Mobile Navigation */}
         {isMenuOpen && (
           <nav className="md:hidden py-4 border-t border-border animate-fade-in">
             <div className="flex flex-col gap-1">
@@ -106,6 +99,22 @@ const Header = () => {
                   {link.label}
                 </Link>
               ))}
+              {user ? (
+                <button
+                  onClick={() => { handleSignOut(); setIsMenuOpen(false); }}
+                  className="px-4 py-3 rounded-lg font-medium text-left text-muted-foreground hover:text-foreground hover:bg-secondary"
+                >
+                  {t('nav.logout')}
+                </button>
+              ) : (
+                <Link
+                  to="/auth"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="px-4 py-3 rounded-lg font-medium text-primary"
+                >
+                  {t('nav.login')}
+                </Link>
+              )}
             </div>
           </nav>
         )}
