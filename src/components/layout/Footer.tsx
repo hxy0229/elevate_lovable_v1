@@ -16,13 +16,13 @@ const Footer = () => {
                 <Music className="w-6 h-6 text-primary-foreground" />
               </div>
               <span className="font-display font-bold text-xl">
-                {language === 'en' ? 'Music Center' : '音乐中心'}
+                {language === 'en' ? 'Elevate Music Studio' : '星月之音文化俱乐部'}
               </span>
             </Link>
             <p className="text-muted-foreground text-sm">
               {language === 'en'
-                ? 'Your creative space for music practice and collaboration.'
-                : '您的音乐练习与合作创意空间。'}
+                ? 'A creative space dedicated to nurturing musical talent through professional instruction.'
+                : '致力于通过专业教学培养音乐人才的创意空间。'}
             </p>
           </div>
 
@@ -57,18 +57,8 @@ const Footer = () => {
             </h3>
             <ul className="space-y-3">
               <li className="flex items-center gap-2 text-muted-foreground">
-                <Mail className="w-4 h-4" />
-                <span>info@musiccenter.com</span>
-              </li>
-              <li className="flex items-center gap-2 text-muted-foreground">
-                <Phone className="w-4 h-4" />
-                <span>+1 234 567 890</span>
-              </li>
-              <li className="flex items-center gap-2 text-muted-foreground">
-                <MapPin className="w-4 h-4" />
-                <span>
-                  {language === 'en' ? '123 Music Street' : '音乐街123号'}
-                </span>
+                <MapPin className="w-4 h-4 flex-shrink-0" />
+                <span>809 French Rd, Kitchener Complex, Singapore 200809</span>
               </li>
             </ul>
           </div>
@@ -97,7 +87,7 @@ const Footer = () => {
 
         <div className="border-t border-border mt-8 pt-8 text-center text-muted-foreground text-sm">
           <p>
-            © {new Date().getFullYear()} Music Center.{' '}
+            © {new Date().getFullYear()} Elevate Music Studio Pte. Ltd.{' '}
             {language === 'en' ? 'All rights reserved.' : '版权所有。'}
           </p>
         </div>

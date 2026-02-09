@@ -27,8 +27,8 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.signup': 'Sign Up',
     
     // Home page
-    'home.welcome': 'Welcome to Music Center',
-    'home.subtitle': 'Your premier destination for music practice, collaboration, and growth',
+    'home.welcome': 'Elevate Music Studio',
+    'home.subtitle': 'A creative space dedicated to nurturing musical talent through professional instruction in piano, singing, and vocal performance',
     'home.cta.packages': 'View Membership',
     'home.cta.rooms': 'Book Practice Room',
     'home.cta.sessions': 'Join Sessions',
@@ -38,8 +38,8 @@ const translations: Record<Language, Record<string, string>> = {
     'home.feature.rooms.desc': 'Fully equipped practice space available for booking',
     'home.feature.sessions': 'Weekly Sessions',
     'home.feature.sessions.desc': 'Solo vocal practice and band rehearsals every week',
-    'home.feature.lessons': 'Private Lessons',
-    'home.feature.lessons.desc': 'Professional vocal and instrument lessons tailored to your level',
+    'home.feature.lessons': 'Lessons & Programs',
+    'home.feature.lessons.desc': 'Vocal, piano, orchestral, guitar, ukulele, drums and exam preparation',
     
     // Packages page
     'packages.title': 'Membership Packages',
@@ -95,17 +95,17 @@ const translations: Record<Language, Record<string, string>> = {
     'sessions.chooseRole': 'Choose your role for this session',
     
     // Lessons
-    'lessons.title': 'Private Lessons',
-    'lessons.subtitle': 'Professional one-on-one instruction tailored to your level',
-    'lessons.vocal': 'Vocal Lessons',
-    'lessons.piano': 'Classical Piano',
-    'lessons.guitar': 'Guitar Lessons',
-    'lessons.drums': 'Drum Lessons',
-    'lessons.bass': 'Bass Lessons',
+    'lessons.title': 'Lessons & Programs',
+    'lessons.subtitle': 'Professional instruction across vocal, instrumental, and performance programs',
+    'lessons.vocal': 'Vocal Training',
+    'lessons.piano': 'Piano',
+    'lessons.guitar': 'Guitar & Ukulele',
+    'lessons.drums': 'Drums',
+    'lessons.bass': 'Orchestral & Folk Instruments',
     'lessons.inquire': 'Inquire Now',
     'lessons.priceNote': 'Pricing based on student level assessment',
     'lessons.contactUs': 'Contact us for pricing',
-    'lessons.description': 'Our experienced instructors provide personalized lessons for all skill levels. Pricing is determined after an initial assessment of your current abilities and goals.',
+    'lessons.description': 'We offer vocal (solo, duet, choir), instrumental (piano, orchestral, folk, guitar, ukulele, drums), and programs including band performances, original music, grading exams, concerts, competitions, musical theatre, and personal IP branding.',
     
     // Profile
     'profile.title': 'My Profile',
@@ -161,6 +161,9 @@ const translations: Record<Language, Record<string, string>> = {
     'common.english': 'English',
     'common.chinese': '中文',
     
+    // Sections
+    'home.whatWeOffer': 'What We Offer',
+
     // Footer
     'footer.rights': 'All rights reserved',
     'footer.contact': 'Contact Us',
@@ -181,8 +184,8 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.signup': '注册',
     
     // Home page
-    'home.welcome': '欢迎来到音乐中心',
-    'home.subtitle': '您的专业音乐练习、合作与成长空间',
+    'home.welcome': '星月之音文化俱乐部',
+    'home.subtitle': '致力于通过钢琴、声乐等专业教学培养音乐人才的创意空间',
     'home.cta.packages': '查看会员配套',
     'home.cta.rooms': '预约练习室',
     'home.cta.sessions': '参加活动',
@@ -192,8 +195,8 @@ const translations: Record<Language, Record<string, string>> = {
     'home.feature.rooms.desc': '设备齐全的练习空间可供预约',
     'home.feature.sessions': '每周活动',
     'home.feature.sessions.desc': '每周独唱练习和乐队排练',
-    'home.feature.lessons': '私人课程',
-    'home.feature.lessons.desc': '根据您的水平定制的专业声乐和乐器课程',
+    'home.feature.lessons': '课程与项目',
+    'home.feature.lessons.desc': '声乐、钢琴、管弦乐、民乐、吉他、尤克里里、架子鼓及考级培训',
     
     // Packages page
     'packages.title': '会员配套',
@@ -249,17 +252,17 @@ const translations: Record<Language, Record<string, string>> = {
     'sessions.chooseRole': '选择您在此活动中的角色',
     
     // Lessons
-    'lessons.title': '私人课程',
-    'lessons.subtitle': '根据您的水平量身定制的专业一对一教学',
-    'lessons.vocal': '声乐课程',
-    'lessons.piano': '古典钢琴',
-    'lessons.guitar': '吉他课程',
-    'lessons.drums': '鼓课程',
-    'lessons.bass': '贝斯课程',
+    'lessons.title': '课程与项目',
+    'lessons.subtitle': '涵盖声乐、器乐及表演项目的专业教学',
+    'lessons.vocal': '声乐培训',
+    'lessons.piano': '钢琴',
+    'lessons.guitar': '吉他 & 尤克里里',
+    'lessons.drums': '架子鼓',
+    'lessons.bass': '管弦乐 & 民乐',
     'lessons.inquire': '立即咨询',
     'lessons.priceNote': '价格根据学生水平评估确定',
     'lessons.contactUs': '联系我们了解价格',
-    'lessons.description': '我们经验丰富的教师为各级别学员提供个性化课程。价格在初步评估您的能力和目标后确定。',
+    'lessons.description': '声乐：独唱、对唱、合唱 | 器乐：钢琴、管弦乐、民乐、吉他、尤克里里、架子鼓 | 活动：乐队演出、素人原创音乐、儿童/成人考级、音乐会、比赛、音乐舞台短剧、个人IP打造',
     
     // Profile
     'profile.title': '我的资料',
@@ -315,6 +318,9 @@ const translations: Record<Language, Record<string, string>> = {
     'common.english': 'English',
     'common.chinese': '中文',
     
+    // Sections
+    'home.whatWeOffer': '我们的服务',
+
     // Footer
     'footer.rights': '版权所有',
     'footer.contact': '联系我们',

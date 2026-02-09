@@ -33,7 +33,7 @@ const Header = () => {
               <Music className="w-5 h-5 text-primary-foreground" />
             </div>
             <span className="font-display font-semibold text-lg text-foreground hidden sm:block">
-              {language === 'en' ? 'Music Center' : '音乐中心'}
+              {language === 'en' ? 'Elevate Music' : '星月之音'}
             </span>
           </Link>
 
