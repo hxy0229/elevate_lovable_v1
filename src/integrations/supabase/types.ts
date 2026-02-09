@@ -14,7 +14,180 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      session_content: {
+        Row: {
+          content_text: string | null
+          content_type: string
+          description: string | null
+          file_url: string | null
+          id: string
+          session_id: string
+          title: string | null
+          uploaded_at: string
+          user_id: string
+        }
+        Insert: {
+          content_text?: string | null
+          content_type: string
+          description?: string | null
+          file_url?: string | null
+          id?: string
+          session_id: string
+          title?: string | null
+          uploaded_at?: string
+          user_id: string
+        }
+        Update: {
+          content_text?: string | null
+          content_type?: string
+          description?: string | null
+          file_url?: string | null
+          id?: string
+          session_id?: string
+          title?: string | null
+          uploaded_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_content_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      session_registrations: {
+        Row: {
+          display_name: string
+          id: string
+          registered_at: string
+          roles: string[]
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          display_name: string
+          id?: string
+          registered_at?: string
+          roles?: string[]
+          session_id: string
+          user_id: string
+        }
+        Update: {
+          display_name?: string
+          id?: string
+          registered_at?: string
+          roles?: string[]
+          session_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_registrations_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      session_songs: {
+        Row: {
+          artist: string
+          created_at: string
+          id: string
+          requested_by: string
+          session_id: string
+          singer_name: string
+          song_key: string
+          song_title: string
+          sort_order: number
+        }
+        Insert: {
+          artist: string
+          created_at?: string
+          id?: string
+          requested_by: string
+          session_id: string
+          singer_name: string
+          song_key: string
+          song_title: string
+          sort_order?: number
+        }
+        Update: {
+          artist?: string
+          created_at?: string
+          id?: string
+          requested_by?: string
+          session_id?: string
+          singer_name?: string
+          song_key?: string
+          song_title?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_songs_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sessions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          day_of_week: number
+          end_time: string
+          id: string
+          max_participants: number
+          name: string
+          name_cn: string | null
+          session_date: string | null
+          session_type: string
+          start_time: string
+          theme: string | null
+          theme_cn: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          day_of_week: number
+          end_time: string
+          id?: string
+          max_participants?: number
+          name: string
+          name_cn?: string | null
+          session_date?: string | null
+          session_type?: string
+          start_time: string
+          theme?: string | null
+          theme_cn?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          day_of_week?: number
+          end_time?: string
+          id?: string
+          max_participants?: number
+          name?: string
+          name_cn?: string | null
+          session_date?: string | null
+          session_type?: string
+          start_time?: string
+          theme?: string | null
+          theme_cn?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
