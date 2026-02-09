@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Music, Eye, EyeOff } from 'lucide-react';
+import { Music, Eye, EyeOff, Shield } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -21,6 +22,7 @@ const Auth = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -56,13 +58,24 @@ const Auth = () => {
         toast({ title: msg, variant: 'destructive' });
       }
     } else {
-      const { error } = await signUp(email, password, displayName.trim());
+      const { error, data } = await signUp(email, password, displayName.trim());
       if (error) {
         const msg = error.message?.includes('already registered')
           ? (language === 'zh' ? '该邮箱已注册' : 'This email is already registered')
           : error.message;
         toast({ title: msg, variant: 'destructive' });
       } else {
+        // If invite code provided, try to claim admin after signup
+        if (inviteCode.trim() && data?.session) {
+          try {
+            const { data: result, error: fnError } = await supabase.functions.invoke('claim-admin', {
+              body: { invite_code: inviteCode.trim() },
+            });
+            if (!fnError && result?.success) {
+              toast({ title: language === 'zh' ? '管理员权限已激活！' : 'Admin access granted!' });
+            }
+          } catch { /* ignore - they can try later */ }
+        }
         toast({
           title: language === 'zh' ? '注册成功！' : 'Account created!',
           description: language === 'zh' ? '请查看邮箱验证链接' : 'Please check your email to verify your account.',
@@ -145,6 +158,20 @@ const Auth = () => {
                         className="rounded-xl h-12 bg-secondary border-border"
                         required
                         minLength={6}
+                      />
+                    </div>
+                  )}
+                  {!isLogin && (
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-1.5">
+                        <Shield className="w-3.5 h-3.5" />
+                        {language === 'zh' ? '邀请码（可选）' : 'Invite Code (optional)'}
+                      </Label>
+                      <Input
+                        value={inviteCode}
+                        onChange={(e) => setInviteCode(e.target.value)}
+                        placeholder={language === 'zh' ? '管理员邀请码' : 'Admin invite code'}
+                        className="rounded-xl h-12 bg-secondary border-border"
                       />
                     </div>
                   )}
