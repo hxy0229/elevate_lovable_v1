@@ -4,11 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useLanguage } from '@/contexts/LanguageContext';
-import type { SessionRow, RegistrationRow, SongRow } from '@/hooks/useSessionData';
+import type { SessionRow, RegistrationRow, SongRow, ContentRow } from '@/hooks/useSessionData';
 import RegistrationForm from './RegistrationForm';
 import SongRequestForm from './SongRequestForm';
 import SessionContentSection from './SessionContentSection';
-import type { ContentRow } from '@/hooks/useSessionData';
+import ThemeEditor from './ThemeEditor';
+import PosterGenerator from './PosterGenerator';
 
 interface SessionCardProps {
   session: SessionRow;
@@ -80,6 +81,13 @@ const SessionCard = ({
                   {language === 'zh' ? '主题' : 'Theme'}: {themeText}
                 </span>
               </div>
+            )}
+            {user && session.created_by === user.id && (
+              <ThemeEditor
+                currentTheme={session.theme}
+                currentThemeCn={session.theme_cn}
+                onSave={(theme, themeCn) => onUpdateTheme(session.id, theme, themeCn)}
+              />
             )}
           </div>
           <Badge variant={isFull ? 'secondary' : 'default'} className={isFull ? 'bg-muted text-muted-foreground' : ''}>
@@ -212,6 +220,11 @@ const SessionCard = ({
             }}
             onCancel={() => setShowSongForm(false)}
           />
+        )}
+
+        {/* Poster generator */}
+        {(registrations.length > 0 || songs.length > 0) && (
+          <PosterGenerator session={session} registrations={registrations} songs={songs} />
         )}
 
         {/* Post-session content */}
