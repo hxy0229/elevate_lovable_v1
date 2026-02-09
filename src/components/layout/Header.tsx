@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, Music, Globe, LogOut } from 'lucide-react';
+import { Menu, X, Music, Globe, LogOut, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAdmin } from '@/hooks/useAdmin';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { language, setLanguage, t } = useLanguage();
   const { user, signOut } = useAuth();
+  const { isAdmin } = useAdmin();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -18,6 +20,7 @@ const Header = () => {
     { path: '/rooms', label: t('nav.rooms') },
     { path: '/sessions', label: t('nav.sessions') },
     { path: '/lessons', label: t('nav.lessons') },
+    ...(isAdmin ? [{ path: '/admin', label: t('nav.admin') }] : []),
   ];
 
   const isActive = (path: string) => location.pathname === path;

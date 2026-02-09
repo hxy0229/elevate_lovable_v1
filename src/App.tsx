@@ -11,6 +11,7 @@ import Rooms from "./pages/Rooms";
 import Sessions from "./pages/Sessions";
 import Lessons from "./pages/Lessons";
 import Auth from "./pages/Auth";
+import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/sessions" element={<Sessions />} />
             <Route path="/lessons" element={<Lessons />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/admin" element={<Admin />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
