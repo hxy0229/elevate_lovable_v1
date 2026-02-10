@@ -5,92 +5,135 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+function escapeXml(s: string) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
     const { sessionName, theme, date, time, participants, songList } = await req.json();
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const W = 800;
+    const participantLines = (participants as any[]).map(
+      (p: any) => `${p.name}  (${p.roles.join(', ')})`
+    );
+    const songLines = (songList as any[]).map(
+      (s: any, i: number) => `${i + 1}. ${s.singer} -《${s.title}》${s.artist} [${s.key}]`
+    );
 
-    const participantList = participants.map((p: any) => `${p.name} (${p.roles.join(', ')})`).join('\n');
-    const songListText = songList.map((s: any, i: number) => `${i + 1}. ${s.singer} - ${s.title} by ${s.artist} [Key: ${s.key}]`).join('\n');
+    // Calculate dynamic height
+    const headerH = 200;
+    const themeH = theme ? 80 : 0;
+    const infoH = 100;
+    const partHeaderH = 60;
+    const partLinesH = participantLines.length * 32 + 20;
+    const songHeaderH = 60;
+    const songLinesH = songLines.length * 32 + 20;
+    const footerH = 120;
+    const H = headerH + themeH + infoH + partHeaderH + partLinesH + songHeaderH + songLinesH + footerH + 40;
 
-    const prompt = `Generate a beautiful, aesthetic event poster image for a music jam session. The poster should look professional and visually stunning, suitable for sharing on social media.
+    let y = 0;
 
-Design requirements:
-- Modern, elegant design with a musical/artistic theme
-- Use warm, inviting colors (golds, deep blues, warm oranges)
-- Include decorative musical elements (notes, instruments silhouettes)
-- Clean typography with clear hierarchy
-- The text should be readable and well-laid-out
+    // Build SVG
+    let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a1a2e"/>
+      <stop offset="50%" stop-color="#16213e"/>
+      <stop offset="100%" stop-color="#0f3460"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#e94560"/>
+      <stop offset="100%" stop-color="#f5a623"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#f5a623"/>
+      <stop offset="100%" stop-color="#f7d794"/>
+    </linearGradient>
+  </defs>
+  <rect width="${W}" height="${H}" fill="url(#bg)" rx="20"/>
+  <!-- Border -->
+  <rect x="12" y="12" width="${W - 24}" height="${H - 24}" rx="14" fill="none" stroke="url(#gold)" stroke-width="1.5" opacity="0.4"/>
+  <!-- Decorative music notes -->
+  <text x="60" y="60" font-size="30" opacity="0.15" fill="#f5a623">♪</text>
+  <text x="${W - 80}" y="80" font-size="40" opacity="0.12" fill="#f5a623">♫</text>
+  <text x="50" y="${H - 40}" font-size="35" opacity="0.1" fill="#f5a623">♬</text>
+  <text x="${W - 60}" y="${H - 50}" font-size="28" opacity="0.13" fill="#f5a623">♩</text>
+`;
 
-Content to include on the poster:
-🎵 Studio: Elevate Music Studio / 星月之音文化俱乐部
-📋 Session: ${sessionName}
-${theme ? `🎨 Theme: ${theme}` : ''}
-📅 Date: ${date}
-⏰ Time: ${time}
-📍 Venue: 809 French Rd, Kitchener Complex
+    // Header
+    y = 60;
+    svg += `  <text x="${W / 2}" y="${y}" text-anchor="middle" font-size="16" fill="#f5a623" font-family="sans-serif" letter-spacing="4" opacity="0.8">✦ ✦ ✦</text>\n`;
+    y += 40;
+    svg += `  <text x="${W / 2}" y="${y}" text-anchor="middle" font-size="28" fill="#f7d794" font-family="sans-serif" font-weight="bold">${escapeXml("Elevate Music Studio")}</text>\n`;
+    y += 36;
+    svg += `  <text x="${W / 2}" y="${y}" text-anchor="middle" font-size="22" fill="#e8d5b7" font-family="sans-serif">${escapeXml("星月之音文化俱乐部")}</text>\n`;
+    y += 30;
+    // Divider line
+    svg += `  <line x1="200" y1="${y}" x2="${W - 200}" y2="${y}" stroke="url(#accent)" stroke-width="2" opacity="0.6"/>\n`;
+    y += 20;
 
-👥 Performers (${participants.length}):
-${participantList}
+    // Session name
+    y += 10;
+    svg += `  <text x="${W / 2}" y="${y}" text-anchor="middle" font-size="20" fill="#ffffff" font-family="sans-serif" font-weight="bold">${escapeXml(sessionName)}</text>\n`;
+    y += 30;
 
-🎶 Song List:
-${songListText}
-
-Make the poster portrait orientation (3:4 ratio). Use elegant fonts and layout. The overall feel should be warm, professional, and music-themed.`;
-
-    console.log("Generating image poster for session:", sessionName);
-
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image",
-        messages: [
-          { role: "user", content: prompt },
-        ],
-        modalities: ["image", "text"],
-        stream: false,
-      }),
-    });
-
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limited, please try again later." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "AI credits needed. Please add funds." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const t = await response.text();
-      console.error("AI gateway error:", response.status, t);
-      return new Response(JSON.stringify({ error: "AI service unavailable" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // Theme
+    if (theme) {
+      svg += `  <rect x="150" y="${y - 22}" width="${W - 300}" height="36" rx="18" fill="url(#accent)" opacity="0.2"/>\n`;
+      svg += `  <text x="${W / 2}" y="${y + 2}" text-anchor="middle" font-size="18" fill="#e94560" font-family="sans-serif" font-weight="bold">🎨 ${escapeXml(theme)}</text>\n`;
+      y += 50;
     }
 
-    const data = await response.json();
-    const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    // Date / Time / Venue
+    y += 10;
+    svg += `  <text x="${W / 2}" y="${y}" text-anchor="middle" font-size="16" fill="#a8b2d1" font-family="sans-serif">📅 ${escapeXml(date)}</text>\n`;
+    y += 28;
+    svg += `  <text x="${W / 2}" y="${y}" text-anchor="middle" font-size="16" fill="#a8b2d1" font-family="sans-serif">⏰ ${escapeXml(time)}   📍 809 French Rd, Kitchener Complex</text>\n`;
+    y += 36;
 
-    if (!imageUrl) {
-      console.error("No image in response:", JSON.stringify(data).substring(0, 500));
-      return new Response(JSON.stringify({ error: "Failed to generate poster image" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // Divider
+    svg += `  <line x1="100" y1="${y}" x2="${W - 100}" y2="${y}" stroke="#f5a623" stroke-width="0.5" opacity="0.3"/>\n`;
+    y += 30;
+
+    // Participants
+    svg += `  <text x="${W / 2}" y="${y}" text-anchor="middle" font-size="18" fill="#f5a623" font-family="sans-serif" font-weight="bold">👥 Performers / 演出阵容 (${participants.length})</text>\n`;
+    y += 30;
+    for (const line of participantLines) {
+      svg += `  <text x="${W / 2}" y="${y}" text-anchor="middle" font-size="14" fill="#ccd6f6" font-family="sans-serif">${escapeXml(line)}</text>\n`;
+      y += 28;
     }
+    y += 10;
 
-    console.log("Image poster generated successfully");
+    // Divider
+    svg += `  <line x1="100" y1="${y}" x2="${W - 100}" y2="${y}" stroke="#f5a623" stroke-width="0.5" opacity="0.3"/>\n`;
+    y += 30;
 
-    return new Response(JSON.stringify({ imageUrl }), {
+    // Songs
+    svg += `  <text x="${W / 2}" y="${y}" text-anchor="middle" font-size="18" fill="#f5a623" font-family="sans-serif" font-weight="bold">🎶 Song List / 歌单</text>\n`;
+    y += 30;
+    for (const line of songLines) {
+      svg += `  <text x="80" y="${y}" font-size="14" fill="#ccd6f6" font-family="sans-serif">${escapeXml(line)}</text>\n`;
+      y += 28;
+    }
+    y += 20;
+
+    // Divider
+    svg += `  <line x1="200" y1="${y}" x2="${W - 200}" y2="${y}" stroke="url(#accent)" stroke-width="2" opacity="0.6"/>\n`;
+    y += 30;
+
+    // Footer
+    svg += `  <text x="${W / 2}" y="${y}" text-anchor="middle" font-size="14" fill="#a8b2d1" font-family="sans-serif">🎵 Come jam with us! 欢迎参加！🎵</text>\n`;
+    y += 30;
+    svg += `  <text x="${W / 2}" y="${y}" text-anchor="middle" font-size="12" fill="#64748b" font-family="sans-serif" opacity="0.7">Elevate Music Studio © 2026</text>\n`;
+
+    svg += `</svg>`;
+
+    console.log("SVG poster generated for:", sessionName);
+
+    return new Response(JSON.stringify({ svg }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {

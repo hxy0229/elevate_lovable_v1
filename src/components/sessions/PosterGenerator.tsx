@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Image, Download, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -15,8 +15,9 @@ interface Props {
 const PosterGenerator = ({ session, registrations, songs }: Props) => {
   const { language } = useLanguage();
   const { toast } = useToast();
-  const [imageUrl, setImageUrl] = useState('');
+  const [svgData, setSvgData] = useState('');
   const [generating, setGenerating] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
 
   const formatTime = (t: string) => t.substring(0, 5);
 
@@ -26,7 +27,7 @@ const PosterGenerator = ({ session, registrations, songs }: Props) => {
 
   const handleGenerate = async () => {
     setGenerating(true);
-    setImageUrl('');
+    setSvgData('');
     try {
       const { data, error } = await supabase.functions.invoke('generate-poster', {
         body: {
@@ -39,7 +40,7 @@ const PosterGenerator = ({ session, registrations, songs }: Props) => {
         },
       });
       if (error) throw error;
-      setImageUrl(data.imageUrl);
+      setSvgData(data.svg);
     } catch (err: any) {
       toast({ title: language === 'zh' ? '生成失败' : 'Generation failed', description: err.message, variant: 'destructive' });
     }
@@ -47,11 +48,39 @@ const PosterGenerator = ({ session, registrations, songs }: Props) => {
   };
 
   const handleDownload = () => {
-    const link = document.createElement('a');
-    link.href = imageUrl;
-    link.download = `poster-${session.name}-${session.session_date || 'session'}.jpg`;
-    link.click();
+    if (!svgData) return;
+    // Parse SVG to get dimensions
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(svgData, 'image/svg+xml');
+    const svgEl = doc.querySelector('svg');
+    const w = parseInt(svgEl?.getAttribute('width') || '800');
+    const h = parseInt(svgEl?.getAttribute('height') || '600');
+
+    const canvas = document.createElement('canvas');
+    const scale = 2; // hi-dpi
+    canvas.width = w * scale;
+    canvas.height = h * scale;
+    const ctx = canvas.getContext('2d')!;
+    ctx.scale(scale, scale);
+
+    const img = new window.Image();
+    const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    img.onload = () => {
+      ctx.drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      const jpegUrl = canvas.toDataURL('image/jpeg', 0.95);
+      const link = document.createElement('a');
+      link.href = jpegUrl;
+      link.download = `poster-${session.name}-${session.session_date || 'session'}.jpg`;
+      link.click();
+    };
+    img.src = url;
   };
+
+  const svgDataUrl = svgData
+    ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgData)}`
+    : '';
 
   return (
     <div className="space-y-3">
@@ -67,11 +96,12 @@ const PosterGenerator = ({ session, registrations, songs }: Props) => {
           : (language === 'zh' ? '生成活动海报' : 'Generate Poster')}
       </Button>
 
-      {imageUrl && (
+      {svgData && (
         <div className="space-y-3">
           <div className="rounded-xl overflow-hidden border border-border shadow-lg">
             <img
-              src={imageUrl}
+              ref={imgRef}
+              src={svgDataUrl}
               alt="Session poster"
               className="w-full h-auto"
             />
@@ -82,7 +112,7 @@ const PosterGenerator = ({ session, registrations, songs }: Props) => {
             className="rounded-full gap-2 border-primary/30 text-primary hover:bg-primary/10"
           >
             <Download className="w-4 h-4" />
-            {language === 'zh' ? '下载海报' : 'Download Poster'}
+            {language === 'zh' ? '下载海报 (JPEG)' : 'Download Poster (JPEG)'}
           </Button>
         </div>
       )}
