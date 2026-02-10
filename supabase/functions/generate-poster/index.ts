@@ -99,7 +99,7 @@ serve(async (req) => {
     y += 30;
 
     // Participants
-    svg += `  <text x="${W / 2}" y="${y}" text-anchor="middle" font-size="18" fill="#f5a623" font-family="sans-serif" font-weight="bold">👥 Performers / 演出阵容 (${participants.length})</text>\n`;
+    svg += `  <text x="${W / 2}" y="${y}" text-anchor="middle" font-size="18" fill="#f5a623" font-family="sans-serif" font-weight="bold">👥 Participants / 参与者 (${participants.length})</text>\n`;
     y += 30;
     for (const line of participantLines) {
       svg += `  <text x="${W / 2}" y="${y}" text-anchor="middle" font-size="14" fill="#ccd6f6" font-family="sans-serif">${escapeXml(line)}</text>\n`;
