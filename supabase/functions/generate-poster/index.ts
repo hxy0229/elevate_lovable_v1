@@ -14,27 +14,35 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const prompt = `You are a creative poster designer. Generate a beautiful text-based activity poster for a music rehearsal session. Use emojis and creative formatting. The poster should be in both English and Chinese.
+    const participantList = participants.map((p: any) => `${p.name} (${p.roles.join(', ')})`).join('\n');
+    const songListText = songList.map((s: any, i: number) => `${i + 1}. ${s.singer} - ${s.title} by ${s.artist} [Key: ${s.key}]`).join('\n');
 
-Session Details:
-- Name: ${sessionName}
-- Theme: ${theme || 'No specific theme'}
-- Date: ${date}
-- Time: ${time}
-- Participants (${participants.length}): ${participants.map((p: any) => `${p.name} (${p.roles.join(', ')})`).join(', ')}
-- Song List: ${songList.map((s: any, i: number) => `${i + 1}. ${s.singer} - ${s.key} ${s.artist}《${s.title}》`).join(', ')}
+    const prompt = `Generate a beautiful, aesthetic event poster image for a music jam session. The poster should look professional and visually stunning, suitable for sharing on social media.
 
-Create a visually appealing text poster with:
-1. A catchy header with the studio name "Elevate Music Studio / 星月之音文化俱乐部"
-2. Session theme (if provided) prominently displayed
-3. Date, time and venue (809 French Rd, Kitchener Complex)
-4. Participant lineup with their roles
-5. Song list in order
-6. A closing line inviting people
+Design requirements:
+- Modern, elegant design with a musical/artistic theme
+- Use warm, inviting colors (golds, deep blues, warm oranges)
+- Include decorative musical elements (notes, instruments silhouettes)
+- Clean typography with clear hierarchy
+- The text should be readable and well-laid-out
 
-Use creative ASCII art borders, emojis, and formatting. Make it look like a real event poster that could be shared on social media. Keep it concise but eye-catching.`;
+Content to include on the poster:
+🎵 Studio: Elevate Music Studio / 星月之音文化俱乐部
+📋 Session: ${sessionName}
+${theme ? `🎨 Theme: ${theme}` : ''}
+📅 Date: ${date}
+⏰ Time: ${time}
+📍 Venue: 809 French Rd, Kitchener Complex
 
-    console.log("Generating poster for session:", sessionName);
+👥 Performers (${participants.length}):
+${participantList}
+
+🎶 Song List:
+${songListText}
+
+Make the poster portrait orientation (3:4 ratio). Use elegant fonts and layout. The overall feel should be warm, professional, and music-themed.`;
+
+    console.log("Generating image poster for session:", sessionName);
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -43,10 +51,11 @@ Use creative ASCII art borders, emojis, and formatting. Make it look like a real
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-flash-image",
         messages: [
           { role: "user", content: prompt },
         ],
+        modalities: ["image", "text"],
         stream: false,
       }),
     });
@@ -70,11 +79,18 @@ Use creative ASCII art borders, emojis, and formatting. Make it look like a real
     }
 
     const data = await response.json();
-    const posterText = data.choices?.[0]?.message?.content || "Failed to generate poster";
+    const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
 
-    console.log("Poster generated successfully");
+    if (!imageUrl) {
+      console.error("No image in response:", JSON.stringify(data).substring(0, 500));
+      return new Response(JSON.stringify({ error: "Failed to generate poster image" }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-    return new Response(JSON.stringify({ poster: posterText }), {
+    console.log("Image poster generated successfully");
+
+    return new Response(JSON.stringify({ imageUrl }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
