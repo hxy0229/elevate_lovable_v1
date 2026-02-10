@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Image, Copy, Check, Loader2 } from 'lucide-react';
+import { Image, Download, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,9 +15,8 @@ interface Props {
 const PosterGenerator = ({ session, registrations, songs }: Props) => {
   const { language } = useLanguage();
   const { toast } = useToast();
-  const [poster, setPoster] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
   const [generating, setGenerating] = useState(false);
-  const [copied, setCopied] = useState(false);
 
   const formatTime = (t: string) => t.substring(0, 5);
 
@@ -27,7 +26,7 @@ const PosterGenerator = ({ session, registrations, songs }: Props) => {
 
   const handleGenerate = async () => {
     setGenerating(true);
-    setPoster('');
+    setImageUrl('');
     try {
       const { data, error } = await supabase.functions.invoke('generate-poster', {
         body: {
@@ -40,18 +39,18 @@ const PosterGenerator = ({ session, registrations, songs }: Props) => {
         },
       });
       if (error) throw error;
-      setPoster(data.poster);
+      setImageUrl(data.imageUrl);
     } catch (err: any) {
       toast({ title: language === 'zh' ? '生成失败' : 'Generation failed', description: err.message, variant: 'destructive' });
     }
     setGenerating(false);
   };
 
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(poster);
-    setCopied(true);
-    toast({ title: language === 'zh' ? '已复制到剪贴板' : 'Copied to clipboard!' });
-    setTimeout(() => setCopied(false), 2000);
+  const handleDownload = () => {
+    const link = document.createElement('a');
+    link.href = imageUrl;
+    link.download = `poster-${session.name}-${session.session_date || 'session'}.jpg`;
+    link.click();
   };
 
   return (
@@ -68,17 +67,23 @@ const PosterGenerator = ({ session, registrations, songs }: Props) => {
           : (language === 'zh' ? '生成活动海报' : 'Generate Poster')}
       </Button>
 
-      {poster && (
-        <div className="relative">
-          <pre className="p-4 rounded-xl bg-secondary/50 border border-border text-sm whitespace-pre-wrap font-mono text-foreground max-h-[500px] overflow-y-auto">
-            {poster}
-          </pre>
-          <button
-            onClick={handleCopy}
-            className="absolute top-3 right-3 p-2 rounded-lg bg-background/80 border border-border hover:border-primary/50 transition-colors"
+      {imageUrl && (
+        <div className="space-y-3">
+          <div className="rounded-xl overflow-hidden border border-border shadow-lg">
+            <img
+              src={imageUrl}
+              alt="Session poster"
+              className="w-full h-auto"
+            />
+          </div>
+          <Button
+            onClick={handleDownload}
+            variant="outline"
+            className="rounded-full gap-2 border-primary/30 text-primary hover:bg-primary/10"
           >
-            {copied ? <Check className="w-4 h-4 text-primary" /> : <Copy className="w-4 h-4 text-muted-foreground" />}
-          </button>
+            <Download className="w-4 h-4" />
+            {language === 'zh' ? '下载海报' : 'Download Poster'}
+          </Button>
         </div>
       )}
     </div>
