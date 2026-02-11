@@ -2,6 +2,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import Layout from '@/components/layout/Layout';
 import SessionCard from '@/components/sessions/SessionCard';
 import { useSessionData } from '@/hooks/useSessionData';
+import { useMusicSheets } from '@/hooks/useMusicSheets';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const Sessions = () => {
@@ -11,6 +12,10 @@ const Sessions = () => {
     register, unregister, addSong, removeSong, updateTheme,
     uploadContent, deleteContent,
   } = useSessionData();
+  const { sheets, uploadSheet, deleteSheet } = useMusicSheets();
+
+  // Filter out archived sessions for regular users
+  const activeSessions = sessions.filter(s => !(s as any).is_archived);
 
   return (
     <Layout>
@@ -31,19 +36,19 @@ const Sessions = () => {
               Array.from({ length: 3 }).map((_, i) => (
                 <Skeleton key={i} className="h-64 rounded-xl" />
               ))
-            ) : sessions.length === 0 ? (
+            ) : activeSessions.length === 0 ? (
               <p className="text-center text-muted-foreground py-12">
-                {/* No sessions yet */}
                 No sessions scheduled yet.
               </p>
             ) : (
-              sessions.map((session) => (
+              activeSessions.map((session) => (
                 <SessionCard
                   key={session.id}
                   session={session}
                   registrations={registrations.filter((r) => r.session_id === session.id)}
                   songs={songs.filter((s) => s.session_id === session.id)}
                   contents={contents.filter((c) => c.session_id === session.id)}
+                  musicSheets={sheets.filter((s) => s.session_id === session.id)}
                   user={user}
                   onRegister={register}
                   onUnregister={unregister}
@@ -52,6 +57,8 @@ const Sessions = () => {
                   onUpdateTheme={updateTheme}
                   onUploadContent={uploadContent}
                   onDeleteContent={deleteContent}
+                  onUploadSheet={uploadSheet}
+                  onDeleteSheet={deleteSheet}
                 />
               ))
             )}

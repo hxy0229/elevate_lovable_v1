@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      music_sheets: {
+        Row: {
+          content_text: string | null
+          created_at: string
+          file_url: string | null
+          id: string
+          instrument_type: string
+          session_id: string
+          song_id: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          content_text?: string | null
+          created_at?: string
+          file_url?: string | null
+          id?: string
+          instrument_type?: string
+          session_id: string
+          song_id?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          content_text?: string | null
+          created_at?: string
+          file_url?: string | null
+          id?: string
+          instrument_type?: string
+          session_id?: string
+          song_id?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "music_sheets_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "music_sheets_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "session_songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -176,15 +227,19 @@ export type Database = {
       sessions: {
         Row: {
           allowed_roles: string[]
+          announcement: string | null
+          announcement_cn: string | null
           created_at: string
           created_by: string | null
           day_of_week: number
           end_time: string
           id: string
+          is_archived: boolean
           max_participants: number
           max_songs: number
           name: string
           name_cn: string | null
+          recurrence_rule: string | null
           session_date: string | null
           session_type: string
           start_time: string
@@ -194,15 +249,19 @@ export type Database = {
         }
         Insert: {
           allowed_roles?: string[]
+          announcement?: string | null
+          announcement_cn?: string | null
           created_at?: string
           created_by?: string | null
           day_of_week: number
           end_time: string
           id?: string
+          is_archived?: boolean
           max_participants?: number
           max_songs?: number
           name: string
           name_cn?: string | null
+          recurrence_rule?: string | null
           session_date?: string | null
           session_type?: string
           start_time: string
@@ -212,15 +271,19 @@ export type Database = {
         }
         Update: {
           allowed_roles?: string[]
+          announcement?: string | null
+          announcement_cn?: string | null
           created_at?: string
           created_by?: string | null
           day_of_week?: number
           end_time?: string
           id?: string
+          is_archived?: boolean
           max_participants?: number
           max_songs?: number
           name?: string
           name_cn?: string | null
+          recurrence_rule?: string | null
           session_date?: string | null
           session_type?: string
           start_time?: string
