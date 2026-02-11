@@ -1,13 +1,15 @@
 import { useState } from 'react';
-import { Clock, Users, Mic2, Guitar, Drum, Music, Piano, ListMusic, Tag, Plus } from 'lucide-react';
+import { Clock, Users, Mic2, Guitar, Drum, Music, Piano, ListMusic, Tag, Plus, Megaphone } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useLanguage } from '@/contexts/LanguageContext';
 import type { SessionRow, RegistrationRow, SongRow, ContentRow } from '@/hooks/useSessionData';
+import type { MusicSheetRow } from '@/hooks/useMusicSheets';
 import RegistrationForm from './RegistrationForm';
 import SongRequestForm from './SongRequestForm';
 import SessionContentSection from './SessionContentSection';
+import MusicSheetUploader from './MusicSheetUploader';
 import ThemeEditor from './ThemeEditor';
 import PosterGenerator from './PosterGenerator';
 
@@ -16,6 +18,7 @@ interface SessionCardProps {
   registrations: RegistrationRow[];
   songs: SongRow[];
   contents: ContentRow[];
+  musicSheets: MusicSheetRow[];
   user: any;
   onRegister: (sessionId: string, displayName: string, roles: string[]) => Promise<boolean>;
   onUnregister: (sessionId: string) => Promise<boolean>;
@@ -24,6 +27,8 @@ interface SessionCardProps {
   onUpdateTheme: (sessionId: string, theme: string, themeCn: string) => Promise<boolean>;
   onUploadContent: (sessionId: string, contentType: string, file?: File, title?: string, description?: string, contentText?: string) => Promise<boolean>;
   onDeleteContent: (contentId: string) => Promise<boolean>;
+  onUploadSheet: (sessionId: string, instrumentType: string, title: string, file?: File, contentText?: string, songId?: string) => Promise<boolean>;
+  onDeleteSheet: (sheetId: string) => Promise<boolean>;
 }
 
 const roleIcons: Record<string, React.ReactNode> = {
@@ -35,9 +40,9 @@ const roleIcons: Record<string, React.ReactNode> = {
 };
 
 const SessionCard = ({
-  session, registrations, songs, contents, user,
+  session, registrations, songs, contents, musicSheets, user,
   onRegister, onUnregister, onAddSong, onRemoveSong, onUpdateTheme,
-  onUploadContent, onDeleteContent,
+  onUploadContent, onDeleteContent, onUploadSheet, onDeleteSheet,
 }: SessionCardProps) => {
   const { t, language } = useLanguage();
   const [showRegForm, setShowRegForm] = useState(false);
@@ -79,6 +84,17 @@ const SessionCard = ({
                 <Tag className="w-3.5 h-3.5 text-primary" />
                 <span className="text-sm text-primary font-medium">
                   {language === 'zh' ? '主题' : 'Theme'}: {themeText}
+                </span>
+              </div>
+            )}
+            {/* Announcement */}
+            {((session as any).announcement || (session as any).announcement_cn) && (
+              <div className="flex items-start gap-1.5 mt-2 p-2 rounded-lg bg-primary/5 border border-primary/20">
+                <Megaphone className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
+                <span className="text-sm text-foreground">
+                  {language === 'zh'
+                    ? ((session as any).announcement_cn || (session as any).announcement)
+                    : ((session as any).announcement || (session as any).announcement_cn)}
                 </span>
               </div>
             )}
@@ -226,6 +242,16 @@ const SessionCard = ({
         {(registrations.length > 0 || songs.length > 0) && (
           <PosterGenerator session={session} registrations={registrations} songs={songs} />
         )}
+
+        {/* Music sheets */}
+        <MusicSheetUploader
+          sessionId={session.id}
+          sheets={musicSheets}
+          songs={songs}
+          user={user}
+          onUpload={onUploadSheet}
+          onDelete={onDeleteSheet}
+        />
 
         {/* Post-session content */}
         <SessionContentSection

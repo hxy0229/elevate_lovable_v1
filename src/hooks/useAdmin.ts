@@ -27,7 +27,6 @@ export function useAdmin() {
     check();
   }, [user]);
 
-  // Admin CRUD operations
   const createSession = async (session: {
     name: string;
     name_cn: string;
@@ -39,23 +38,57 @@ export function useAdmin() {
     max_songs: number;
     allowed_roles: string[];
     session_date?: string;
+    recurrence_rule?: string;
+    announcement?: string;
+    announcement_cn?: string;
   }) => {
     const { error } = await supabase.from('sessions').insert({
       ...session,
       created_by: user?.id,
       session_date: session.session_date || null,
-    });
+      recurrence_rule: session.recurrence_rule || null,
+      announcement: session.announcement || null,
+      announcement_cn: session.announcement_cn || null,
+    } as any);
     return { error };
   };
 
   const updateSession = async (id: string, updates: Record<string, any>) => {
-    const { error } = await supabase.from('sessions').update(updates).eq('id', id);
+    const { error } = await supabase.from('sessions').update(updates as any).eq('id', id);
     return { error };
   };
 
   const deleteSession = async (id: string) => {
     const { error } = await supabase.from('sessions').delete().eq('id', id);
     return { error };
+  };
+
+  const duplicateSession = async (sessionId: string) => {
+    const { data: original, error: fetchError } = await supabase
+      .from('sessions')
+      .select('*')
+      .eq('id', sessionId)
+      .single();
+    if (fetchError || !original) return { error: fetchError };
+
+    const { id, created_at, updated_at, ...rest } = original as any;
+    const { error } = await supabase.from('sessions').insert({
+      ...rest,
+      name: `${rest.name} (Copy)`,
+      name_cn: rest.name_cn ? `${rest.name_cn} (副本)` : null,
+      created_by: user?.id,
+      session_date: null,
+      is_archived: false,
+    } as any);
+    return { error };
+  };
+
+  const archiveSession = async (id: string) => {
+    return updateSession(id, { is_archived: true });
+  };
+
+  const unarchiveSession = async (id: string) => {
+    return updateSession(id, { is_archived: false });
   };
 
   const removeRegistration = async (id: string) => {
@@ -79,6 +112,9 @@ export function useAdmin() {
     createSession,
     updateSession,
     deleteSession,
+    duplicateSession,
+    archiveSession,
+    unarchiveSession,
     removeRegistration,
     removeAnySong,
     updateSongOrder,

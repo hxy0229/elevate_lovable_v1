@@ -16,6 +16,10 @@ export interface SessionRow {
   theme_cn: string | null;
   session_date: string | null;
   created_by: string | null;
+  recurrence_rule: string | null;
+  is_archived: boolean;
+  announcement: string | null;
+  announcement_cn: string | null;
 }
 
 export interface RegistrationRow {
