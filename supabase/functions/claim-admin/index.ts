@@ -6,6 +6,22 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Simple in-memory rate limiting (resets on cold start, but provides basic protection)
+const attemptTracker = new Map<string, { count: number; resetAt: number }>();
+const MAX_ATTEMPTS = 5;
+const WINDOW_MS = 60 * 60 * 1000; // 1 hour
+
+function isRateLimited(key: string): boolean {
+  const now = Date.now();
+  const record = attemptTracker.get(key);
+  if (!record || now > record.resetAt) {
+    attemptTracker.set(key, { count: 1, resetAt: now + WINDOW_MS });
+    return false;
+  }
+  record.count++;
+  return record.count > MAX_ATTEMPTS;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -35,11 +51,20 @@ Deno.serve(async (req) => {
       });
     }
 
-    const userId = claimsData.claims.sub;
+    const userId = claimsData.claims.sub as string;
+
+    // Rate limit by user ID to prevent brute force
+    if (isRateLimited(userId)) {
+      return new Response(JSON.stringify({ error: "Too many attempts. Please try again later." }), {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { invite_code } = await req.json();
 
-    if (!invite_code || typeof invite_code !== "string") {
-      return new Response(JSON.stringify({ error: "Missing invite code" }), {
+    if (!invite_code || typeof invite_code !== "string" || invite_code.length > 100) {
+      return new Response(JSON.stringify({ error: "Missing or invalid invite code" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -47,6 +72,8 @@ Deno.serve(async (req) => {
 
     const correctCode = Deno.env.get("ADMIN_INVITE_CODE");
     if (!correctCode || invite_code.trim() !== correctCode.trim()) {
+      // Add delay on failed attempts to slow brute force
+      await new Promise((r) => setTimeout(r, 2000));
       console.log("Invalid invite code attempt by user:", userId);
       return new Response(JSON.stringify({ error: "Invalid invite code" }), {
         status: 403,

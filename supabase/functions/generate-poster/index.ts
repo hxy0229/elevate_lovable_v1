@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,14 +14,55 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    // Authentication check
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { sessionName, theme, date, time, participants, songList } = await req.json();
+
+    // Input validation
+    if (!sessionName || typeof sessionName !== "string" || sessionName.length > 500) {
+      return new Response(JSON.stringify({ error: "Invalid session name" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (!Array.isArray(participants) || participants.length > 100) {
+      return new Response(JSON.stringify({ error: "Invalid participants" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (!Array.isArray(songList) || songList.length > 100) {
+      return new Response(JSON.stringify({ error: "Invalid song list" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const W = 800;
     const participantLines = (participants as any[]).map(
-      (p: any) => `${p.name}  (${p.roles.join(', ')})`
+      (p: any) => `${String(p.name || '').substring(0, 100)}  (${Array.isArray(p.roles) ? p.roles.join(', ') : ''})`
     );
     const songLines = (songList as any[]).map(
-      (s: any, i: number) => `${i + 1}. ${s.singer} -《${s.title}》${s.artist} [${s.key}]`
+      (s: any, i: number) => `${i + 1}. ${String(s.singer || '').substring(0, 100)} -《${String(s.title || '').substring(0, 200)}》${String(s.artist || '').substring(0, 100)} [${String(s.key || '').substring(0, 20)}]`
     );
 
     // Calculate dynamic height
@@ -83,15 +125,15 @@ serve(async (req) => {
     // Theme
     if (theme) {
       svg += `  <rect x="150" y="${y - 22}" width="${W - 300}" height="36" rx="18" fill="url(#accent)" opacity="0.2"/>\n`;
-      svg += `  <text x="${W / 2}" y="${y + 2}" text-anchor="middle" font-size="18" fill="#e94560" font-family="sans-serif" font-weight="bold">🎨 ${escapeXml(theme)}</text>\n`;
+      svg += `  <text x="${W / 2}" y="${y + 2}" text-anchor="middle" font-size="18" fill="#e94560" font-family="sans-serif" font-weight="bold">🎨 ${escapeXml(String(theme).substring(0, 200))}</text>\n`;
       y += 50;
     }
 
     // Date / Time / Venue
     y += 10;
-    svg += `  <text x="${W / 2}" y="${y}" text-anchor="middle" font-size="16" fill="#a8b2d1" font-family="sans-serif">📅 ${escapeXml(date)}</text>\n`;
+    svg += `  <text x="${W / 2}" y="${y}" text-anchor="middle" font-size="16" fill="#a8b2d1" font-family="sans-serif">📅 ${escapeXml(String(date || '').substring(0, 100))}</text>\n`;
     y += 28;
-    svg += `  <text x="${W / 2}" y="${y}" text-anchor="middle" font-size="16" fill="#a8b2d1" font-family="sans-serif">⏰ ${escapeXml(time)}   📍 809 French Rd, Kitchener Complex</text>\n`;
+    svg += `  <text x="${W / 2}" y="${y}" text-anchor="middle" font-size="16" fill="#a8b2d1" font-family="sans-serif">⏰ ${escapeXml(String(time || '').substring(0, 50))}   📍 809 French Rd, Kitchener Complex</text>\n`;
     y += 36;
 
     // Divider
@@ -138,7 +180,7 @@ serve(async (req) => {
     });
   } catch (e) {
     console.error("Poster generation error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
+    return new Response(JSON.stringify({ error: "Generation failed" }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
