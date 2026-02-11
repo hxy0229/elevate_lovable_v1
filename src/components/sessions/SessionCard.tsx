@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Clock, Users, Mic2, Guitar, Drum, Music, Piano, ListMusic, Tag, Plus, Megaphone } from 'lucide-react';
+import { Clock, Users, ListMusic, Tag, Plus, Megaphone } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useLanguage } from '@/contexts/LanguageContext';
 import type { SessionRow, RegistrationRow, SongRow, ContentRow } from '@/hooks/useSessionData';
 import type { MusicSheetRow } from '@/hooks/useMusicSheets';
+import type { SessionType, SessionRole } from '@/hooks/useSessionConfig';
 import RegistrationForm from './RegistrationForm';
 import SongRequestForm from './SongRequestForm';
 import SessionContentSection from './SessionContentSection';
@@ -19,6 +20,8 @@ interface SessionCardProps {
   songs: SongRow[];
   contents: ContentRow[];
   musicSheets: MusicSheetRow[];
+  sessionTypes?: SessionType[];
+  sessionRoles?: SessionRole[];
   user: any;
   onRegister: (sessionId: string, displayName: string, roles: string[]) => Promise<boolean>;
   onUnregister: (sessionId: string) => Promise<boolean>;
@@ -31,16 +34,8 @@ interface SessionCardProps {
   onDeleteSheet: (sheetId: string) => Promise<boolean>;
 }
 
-const roleIcons: Record<string, React.ReactNode> = {
-  vocal: <Mic2 className="w-4 h-4" />,
-  guitar: <Guitar className="w-4 h-4" />,
-  drums: <Drum className="w-4 h-4" />,
-  bass: <Music className="w-4 h-4" />,
-  keyboard: <Piano className="w-4 h-4" />,
-};
-
 const SessionCard = ({
-  session, registrations, songs, contents, musicSheets, user,
+  session, registrations, songs, contents, musicSheets, sessionTypes, sessionRoles, user,
   onRegister, onUnregister, onAddSong, onRemoveSong, onUpdateTheme,
   onUploadContent, onDeleteContent, onUploadSheet, onDeleteSheet,
 }: SessionCardProps) => {
@@ -64,7 +59,18 @@ const SessionCard = ({
     ? new Date(session.session_date + 'T00:00:00').toLocaleDateString(language === 'zh' ? 'zh-CN' : 'en-US', { month: 'short', day: 'numeric' })
     : '';
 
-  const getRoleLabel = (role: string) => t(`sessions.${role}`) || role;
+  const getRoleIcon = (role: string) => {
+    const found = sessionRoles?.find(r => r.value === role);
+    return found?.icon || '🎵';
+  };
+  const getRoleLabel = (role: string) => {
+    const found = sessionRoles?.find(r => r.value === role);
+    return found ? (language === 'zh' ? found.label_cn : found.label_en) : (t(`sessions.${role}`) || role);
+  };
+  const getTypeIcon = (value: string) => {
+    const found = sessionTypes?.find(t => t.value === value);
+    return found?.icon || '🎵';
+  };
 
   return (
     <Card className={`overflow-hidden transition-all duration-300 border-border ${isFull && !isRegistered ? 'opacity-75' : 'hover:border-primary/50'}`}>
@@ -76,7 +82,7 @@ const SessionCard = ({
               {dateLabel && <span className="text-sm text-muted-foreground">{dateLabel}</span>}
             </div>
             <CardTitle className="font-display text-xl">
-              {session.session_type === 'solo-vocal' ? '🎤 ' : '🎸 '}
+              {getTypeIcon(session.session_type)}{' '}
               {sessionName}
             </CardTitle>
             {themeText && (
@@ -137,7 +143,7 @@ const SessionCard = ({
                 <div key={reg.id} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary/50 border border-border text-sm">
                   {reg.roles.map((role) => (
                     <span key={role} className="flex items-center gap-1">
-                      {roleIcons[role] || <Music className="w-4 h-4" />}
+                      <span>{getRoleIcon(role)}</span>
                     </span>
                   ))}
                   <span className="text-foreground">{reg.display_name}</span>
@@ -219,6 +225,7 @@ const SessionCard = ({
         {showRegForm && (
           <RegistrationForm
             sessionType={session.session_type}
+            availableRoles={sessionRoles}
             onSubmit={async (name, roles) => {
               const ok = await onRegister(session.id, name, roles);
               if (ok) setShowRegForm(false);

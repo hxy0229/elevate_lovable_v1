@@ -3,6 +3,7 @@ import Layout from '@/components/layout/Layout';
 import SessionCard from '@/components/sessions/SessionCard';
 import { useSessionData } from '@/hooks/useSessionData';
 import { useMusicSheets } from '@/hooks/useMusicSheets';
+import { useSessionConfig } from '@/hooks/useSessionConfig';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const Sessions = () => {
@@ -13,6 +14,7 @@ const Sessions = () => {
     uploadContent, deleteContent,
   } = useSessionData();
   const { sheets, uploadSheet, deleteSheet } = useMusicSheets();
+  const { sessionTypes, sessionRoles } = useSessionConfig();
 
   // Filter out archived sessions for regular users
   const activeSessions = sessions.filter(s => !(s as any).is_archived);
@@ -49,6 +51,8 @@ const Sessions = () => {
                   songs={songs.filter((s) => s.session_id === session.id)}
                   contents={contents.filter((c) => c.session_id === session.id)}
                   musicSheets={sheets.filter((s) => s.session_id === session.id)}
+                  sessionTypes={sessionTypes}
+                  sessionRoles={sessionRoles}
                   user={user}
                   onRegister={register}
                   onUnregister={unregister}

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import Layout from '@/components/layout/Layout';
 import { useAdmin } from '@/hooks/useAdmin';
 import { useSessionData } from '@/hooks/useSessionData';
+import { useSessionConfig } from '@/hooks/useSessionConfig';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,7 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import {
   Users, Calendar, Plus, Trash2, Edit2, Save, X, Copy,
   Mic2, Guitar, ListMusic, Shield, Archive, ArchiveRestore,
-  Megaphone, RefreshCw, ChevronDown, ChevronUp,
+  Megaphone, RefreshCw, ChevronDown, ChevronUp, Settings, UserPlus,
 } from 'lucide-react';
 
 interface ProfileRow {
@@ -32,20 +33,12 @@ interface ProfileRow {
 }
 
 const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-const roleOptions = ['Vocal', 'Guitar', 'Drums', 'Bass', 'Keyboard'];
 const recurrenceOptions = [
   { value: '', label: 'No recurrence', labelCn: '不重复' },
   { value: 'weekly', label: 'Every week', labelCn: '每周' },
   { value: 'biweekly', label: 'Every 2 weeks', labelCn: '每两周' },
   { value: 'monthly', label: 'Every month', labelCn: '每月' },
 ];
-
-const defaultForm = {
-  name: '', name_cn: '', session_type: 'band', day_of_week: '2',
-  start_time: '19:30', end_time: '21:30', max_participants: '15',
-  max_songs: '10', allowed_roles: [...roleOptions], session_date: '',
-  recurrence_rule: '', announcement: '', announcement_cn: '',
-};
 
 const Admin = () => {
   const { language } = useLanguage();
@@ -56,6 +49,10 @@ const Admin = () => {
     removeRegistration, removeAnySong,
   } = useAdmin();
   const { sessions, registrations, songs, loading: dataLoading, refetch } = useSessionData();
+  const {
+    sessionTypes, sessionRoles, loading: configLoading,
+    addSessionType, removeSessionType, addSessionRole, removeSessionRole,
+  } = useSessionConfig();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -63,9 +60,24 @@ const Admin = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Record<string, any>>({});
-  const [form, setForm] = useState({ ...defaultForm });
+  const [form, setForm] = useState<Record<string, any>>({
+    name: '', name_cn: '', session_type: '', day_of_week: '2',
+    start_time: '19:30', end_time: '21:30', max_participants: '15',
+    max_songs: '10', allowed_roles: [] as string[], session_date: '',
+    recurrence_rule: '', announcement: '', announcement_cn: '',
+  });
   const [showArchived, setShowArchived] = useState(false);
   const [expandedSessions, setExpandedSessions] = useState<Set<string>>(new Set());
+
+  // Config management state
+  const [newType, setNewType] = useState({ value: '', label_en: '', label_cn: '', icon: '🎵' });
+  const [newRole, setNewRole] = useState({ value: '', label_en: '', label_cn: '', icon: '🎵' });
+
+  // Participant management state
+  const [addingParticipant, setAddingParticipant] = useState<string | null>(null);
+  const [newParticipant, setNewParticipant] = useState({ display_name: '', roles: [] as string[] });
+  const [editingReg, setEditingReg] = useState<string | null>(null);
+  const [editRegForm, setEditRegForm] = useState({ display_name: '', roles: [] as string[] });
 
   useEffect(() => {
     if (!authLoading && !adminLoading && (!user || !isAdmin)) {
@@ -79,7 +91,17 @@ const Admin = () => {
     });
   }, []);
 
-  if (authLoading || adminLoading || dataLoading) {
+  // Set defaults when config loads
+  useEffect(() => {
+    if (sessionTypes.length > 0 && !form.session_type) {
+      setForm(f => ({ ...f, session_type: sessionTypes[0].value }));
+    }
+    if (sessionRoles.length > 0 && form.allowed_roles.length === 0) {
+      setForm(f => ({ ...f, allowed_roles: sessionRoles.map(r => r.value) }));
+    }
+  }, [sessionTypes, sessionRoles]);
+
+  if (authLoading || adminLoading || dataLoading || configLoading) {
     return (
       <Layout>
         <section className="py-20"><div className="container mx-auto px-4 space-y-4">
@@ -95,13 +117,24 @@ const Admin = () => {
   const totalMembers = profiles.length;
   const totalSingers = profiles.filter(p => p.is_singer).length;
   const totalMusicians = profiles.filter(p => p.is_musician).length;
+  const roleOptions = sessionRoles.map(r => r.value);
+
+  const getTypeIcon = (value: string) => sessionTypes.find(t => t.value === value)?.icon || '🎵';
+  const getTypeLabel = (value: string) => {
+    const t = sessionTypes.find(t => t.value === value);
+    return t ? (en ? t.label_en : t.label_cn) : value;
+  };
+  const getRoleLabel = (value: string) => {
+    const r = sessionRoles.find(r => r.value === value);
+    return r ? (en ? r.label_en : r.label_cn) : value;
+  };
 
   const toggleAllowedRole = (role: string, target: 'form' | 'edit') => {
     if (target === 'form') {
       setForm(f => ({
         ...f,
         allowed_roles: f.allowed_roles.includes(role)
-          ? f.allowed_roles.filter(r => r !== role) : [...f.allowed_roles, role],
+          ? f.allowed_roles.filter((r: string) => r !== role) : [...f.allowed_roles, role],
       }));
     } else {
       setEditForm(f => ({
@@ -128,7 +161,12 @@ const Admin = () => {
     } else {
       toast({ title: 'Session created!' });
       setShowCreateForm(false);
-      setForm({ ...defaultForm });
+      setForm({
+        name: '', name_cn: '', session_type: sessionTypes[0]?.value || '', day_of_week: '2',
+        start_time: '19:30', end_time: '21:30', max_participants: '15',
+        max_songs: '10', allowed_roles: roleOptions, session_date: '',
+        recurrence_rule: '', announcement: '', announcement_cn: '',
+      });
       refetch();
     }
   };
@@ -200,6 +238,59 @@ const Admin = () => {
     });
   };
 
+  // Admin add participant
+  const handleAddParticipant = async (sessionId: string) => {
+    if (!newParticipant.display_name.trim() || newParticipant.roles.length === 0) return;
+    const { error } = await supabase.from('session_registrations').insert({
+      session_id: sessionId,
+      user_id: user!.id, // admin's id as proxy
+      display_name: newParticipant.display_name.trim(),
+      roles: newParticipant.roles,
+    } as any);
+    if (error) {
+      toast({ title: 'Failed to add participant', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: en ? 'Participant added!' : '参与者已添加！' });
+      setAddingParticipant(null);
+      setNewParticipant({ display_name: '', roles: [] });
+      refetch();
+    }
+  };
+
+  // Admin edit participant
+  const startEditReg = (reg: any) => {
+    setEditingReg(reg.id);
+    setEditRegForm({ display_name: reg.display_name, roles: [...reg.roles] });
+  };
+
+  const saveEditReg = async () => {
+    if (!editingReg) return;
+    const { error } = await supabase.from('session_registrations')
+      .update({ display_name: editRegForm.display_name, roles: editRegForm.roles } as any)
+      .eq('id', editingReg);
+    if (error) {
+      toast({ title: 'Update failed', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: en ? 'Participant updated!' : '参与者已更新！' });
+      setEditingReg(null);
+      refetch();
+    }
+  };
+
+  const toggleParticipantRole = (role: string, target: 'new' | 'edit') => {
+    if (target === 'new') {
+      setNewParticipant(p => ({
+        ...p,
+        roles: p.roles.includes(role) ? p.roles.filter(r => r !== role) : [...p.roles, role],
+      }));
+    } else {
+      setEditRegForm(p => ({
+        ...p,
+        roles: p.roles.includes(role) ? p.roles.filter(r => r !== role) : [...p.roles, role],
+      }));
+    }
+  };
+
   const activeSessions = sessions.filter(s => !(s as any).is_archived);
   const archivedSessions = sessions.filter(s => (s as any).is_archived);
 
@@ -219,8 +310,11 @@ const Admin = () => {
           <Select value={f.session_type} onValueChange={v => setF(p => ({ ...p, session_type: v }))}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="band">{en ? 'Band' : '乐队'}</SelectItem>
-              <SelectItem value="solo-vocal">{en ? 'Solo Vocal' : '独唱'}</SelectItem>
+              {sessionTypes.map(t => (
+                <SelectItem key={t.value} value={t.value}>
+                  {t.icon} {en ? t.label_en : t.label_cn}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -272,15 +366,15 @@ const Admin = () => {
       <div className="space-y-1.5">
         <label className="text-sm text-muted-foreground">{en ? 'Allowed Roles' : '允许角色'}</label>
         <div className="flex flex-wrap gap-2">
-          {roleOptions.map(role => (
-            <button key={role} onClick={() => toggleAllowedRole(role, target)}
+          {sessionRoles.map(role => (
+            <button key={role.value} onClick={() => toggleAllowedRole(role.value, target)}
               className={`px-3 py-1.5 rounded-lg border text-sm transition-all ${
-                (f.allowed_roles || []).includes(role)
+                (f.allowed_roles || []).includes(role.value)
                   ? 'bg-primary/10 border-primary text-foreground'
                   : 'bg-background border-border text-muted-foreground'
               }`}
             >
-              {role}
+              {role.icon} {en ? role.label_en : role.label_cn}
             </button>
           ))}
         </div>
@@ -314,6 +408,22 @@ const Admin = () => {
     </div>
   );
 
+  const renderParticipantRolePicker = (selectedRoles: string[], toggle: (role: string) => void) => (
+    <div className="flex flex-wrap gap-1.5">
+      {sessionRoles.map(role => (
+        <button key={role.value} onClick={() => toggle(role.value)}
+          className={`px-2 py-1 rounded border text-xs transition-all ${
+            selectedRoles.includes(role.value)
+              ? 'bg-primary/10 border-primary text-foreground'
+              : 'bg-background border-border text-muted-foreground'
+          }`}
+        >
+          {role.icon} {en ? role.label_en : role.label_cn}
+        </button>
+      ))}
+    </div>
+  );
+
   const renderSessionCard = (session: any, isArchived = false) => {
     const sessionRegs = registrations.filter(r => r.session_id === session.id);
     const sessionSongs = songs.filter(s => s.session_id === session.id);
@@ -328,8 +438,9 @@ const Admin = () => {
           <div className="flex justify-between items-start gap-2">
             <div className="flex-1 min-w-0">
               <CardTitle className="text-lg flex items-center gap-2 flex-wrap">
-                {session.session_type === 'solo-vocal' ? '🎤' : '🎸'} {sessionName}
+                {getTypeIcon(session.session_type)} {sessionName}
                 <Badge variant="outline" className="ml-1">{dayNames[session.day_of_week]}</Badge>
+                <Badge variant="secondary" className="text-xs">{getTypeLabel(session.session_type)}</Badge>
                 {session.recurrence_rule && (
                   <Badge variant="secondary" className="text-xs gap-1">
                     <RefreshCw className="w-3 h-3" />
@@ -405,28 +516,91 @@ const Admin = () => {
             <>
               {/* Participants */}
               <div>
-                <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
-                  <Users className="w-4 h-4 text-primary" />
-                  {en ? 'Participants' : '参与者'} ({sessionRegs.length})
-                </h4>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-sm font-semibold flex items-center gap-1.5">
+                    <Users className="w-4 h-4 text-primary" />
+                    {en ? 'Participants' : '参与者'} ({sessionRegs.length})
+                  </h4>
+                  <Button variant="outline" size="sm" className="h-7 text-xs gap-1"
+                    onClick={() => {
+                      setAddingParticipant(addingParticipant === session.id ? null : session.id);
+                      setNewParticipant({ display_name: '', roles: [] });
+                    }}
+                  >
+                    <UserPlus className="w-3.5 h-3.5" /> {en ? 'Add' : '添加'}
+                  </Button>
+                </div>
+
+                {/* Add participant form */}
+                {addingParticipant === session.id && (
+                  <div className="p-3 rounded-lg bg-secondary/30 border border-border space-y-3 mb-3">
+                    <Input
+                      value={newParticipant.display_name}
+                      onChange={e => setNewParticipant(p => ({ ...p, display_name: e.target.value }))}
+                      placeholder={en ? 'Display name' : '显示名称'}
+                      className="bg-background border-border h-8 text-sm"
+                    />
+                    {renderParticipantRolePicker(newParticipant.roles, (role) => toggleParticipantRole(role, 'new'))}
+                    <div className="flex gap-2">
+                      <Button size="sm" className="h-7 text-xs"
+                        disabled={!newParticipant.display_name.trim() || newParticipant.roles.length === 0}
+                        onClick={() => handleAddParticipant(session.id)}
+                      >
+                        <Save className="w-3 h-3 mr-1" /> {en ? 'Add' : '添加'}
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setAddingParticipant(null)}>
+                        <X className="w-3 h-3 mr-1" /> {en ? 'Cancel' : '取消'}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 {sessionRegs.length === 0 ? (
                   <p className="text-sm text-muted-foreground">{en ? 'No registrations yet' : '暂无报名'}</p>
                 ) : (
                   <div className="space-y-1">
                     {sessionRegs.map(reg => (
-                      <div key={reg.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-secondary/30 border border-border">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-foreground">{reg.display_name}</span>
-                          <span className="text-xs text-muted-foreground">{reg.roles.join(', ')}</span>
-                        </div>
-                        <Button variant="ghost" size="sm" onClick={() => {
-                          removeRegistration(reg.id).then(({ error }) => {
-                            if (error) toast({ title: 'Failed', description: error.message, variant: 'destructive' });
-                            else refetch();
-                          });
-                        }} className="h-7 text-destructive hover:text-destructive">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
+                      <div key={reg.id} className="py-2 px-3 rounded-lg bg-secondary/30 border border-border">
+                        {editingReg === reg.id ? (
+                          <div className="space-y-2">
+                            <Input
+                              value={editRegForm.display_name}
+                              onChange={e => setEditRegForm(p => ({ ...p, display_name: e.target.value }))}
+                              className="bg-background border-border h-8 text-sm"
+                            />
+                            {renderParticipantRolePicker(editRegForm.roles, (role) => toggleParticipantRole(role, 'edit'))}
+                            <div className="flex gap-2">
+                              <Button size="sm" className="h-7 text-xs" onClick={saveEditReg}
+                                disabled={!editRegForm.display_name.trim() || editRegForm.roles.length === 0}
+                              >
+                                <Save className="w-3 h-3 mr-1" /> {en ? 'Save' : '保存'}
+                              </Button>
+                              <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setEditingReg(null)}>
+                                <X className="w-3 h-3 mr-1" /> {en ? 'Cancel' : '取消'}
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-foreground">{reg.display_name}</span>
+                              <span className="text-xs text-muted-foreground">{reg.roles.map(r => getRoleLabel(r)).join(', ')}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Button variant="ghost" size="sm" className="h-7" onClick={() => startEditReg(reg)}>
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => {
+                                removeRegistration(reg.id).then(({ error }) => {
+                                  if (error) toast({ title: 'Failed', description: error.message, variant: 'destructive' });
+                                  else refetch();
+                                });
+                              }} className="h-7 text-destructive hover:text-destructive">
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -471,6 +645,19 @@ const Admin = () => {
     );
   };
 
+  // Config management handlers
+  const handleAddType = async () => {
+    if (!newType.value.trim() || !newType.label_en.trim()) return;
+    const ok = await addSessionType(newType.value.trim(), newType.label_en.trim(), newType.label_cn.trim() || newType.label_en.trim(), newType.icon);
+    if (ok) setNewType({ value: '', label_en: '', label_cn: '', icon: '🎵' });
+  };
+
+  const handleAddRole = async () => {
+    if (!newRole.value.trim() || !newRole.label_en.trim()) return;
+    const ok = await addSessionRole(newRole.value.trim(), newRole.label_en.trim(), newRole.label_cn.trim() || newRole.label_en.trim(), newRole.icon);
+    if (ok) setNewRole({ value: '', label_en: '', label_cn: '', icon: '🎵' });
+  };
+
   return (
     <Layout>
       <section className="py-20 lg:py-28">
@@ -512,6 +699,9 @@ const Admin = () => {
               </TabsTrigger>
               <TabsTrigger value="members" className="gap-1.5">
                 <Users className="w-4 h-4" /> {en ? 'Members' : '会员'}
+              </TabsTrigger>
+              <TabsTrigger value="config" className="gap-1.5">
+                <Settings className="w-4 h-4" /> {en ? 'Settings' : '设置'}
               </TabsTrigger>
             </TabsList>
 
@@ -603,6 +793,99 @@ const Admin = () => {
                   <p className="text-center text-muted-foreground py-8">{en ? 'No members yet' : '暂无会员'}</p>
                 )}
               </div>
+            </TabsContent>
+
+            {/* Settings/Config Tab */}
+            <TabsContent value="config" className="space-y-6">
+              <h2 className="font-display text-xl font-semibold text-foreground">
+                {en ? 'Session Configuration' : '活动配置'}
+              </h2>
+
+              {/* Session Types */}
+              <Card className="border-border">
+                <CardHeader>
+                  <CardTitle className="text-lg">{en ? 'Session Types' : '活动类型'}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    {sessionTypes.map(t => (
+                      <div key={t.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-secondary/30 border border-border">
+                        <div className="flex items-center gap-2">
+                          <span>{t.icon}</span>
+                          <span className="font-medium text-foreground">{en ? t.label_en : t.label_cn}</span>
+                          <span className="text-xs text-muted-foreground">({t.value})</span>
+                        </div>
+                        <Button variant="ghost" size="sm" className="h-7 text-destructive hover:text-destructive"
+                          onClick={() => removeSessionType(t.id)}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="p-3 rounded-lg bg-secondary/20 border border-border space-y-3">
+                    <p className="text-sm font-medium text-foreground">{en ? 'Add New Type' : '添加新类型'}</p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                      <Input value={newType.value} onChange={e => setNewType(p => ({ ...p, value: e.target.value }))}
+                        placeholder={en ? 'Value (e.g. choir)' : '值（如 choir）'} className="bg-background border-border h-8 text-sm" />
+                      <Input value={newType.label_en} onChange={e => setNewType(p => ({ ...p, label_en: e.target.value }))}
+                        placeholder={en ? 'Label EN' : '英文标签'} className="bg-background border-border h-8 text-sm" />
+                      <Input value={newType.label_cn} onChange={e => setNewType(p => ({ ...p, label_cn: e.target.value }))}
+                        placeholder={en ? 'Label CN' : '中文标签'} className="bg-background border-border h-8 text-sm" />
+                      <Input value={newType.icon} onChange={e => setNewType(p => ({ ...p, icon: e.target.value }))}
+                        placeholder="🎵" className="bg-background border-border h-8 text-sm w-20" />
+                    </div>
+                    <Button size="sm" className="h-8 text-xs gap-1" onClick={handleAddType}
+                      disabled={!newType.value.trim() || !newType.label_en.trim()}
+                    >
+                      <Plus className="w-3.5 h-3.5" /> {en ? 'Add Type' : '添加类型'}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Session Roles */}
+              <Card className="border-border">
+                <CardHeader>
+                  <CardTitle className="text-lg">{en ? 'Participant Roles' : '参与者角色'}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    {sessionRoles.map(r => (
+                      <div key={r.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-secondary/30 border border-border">
+                        <div className="flex items-center gap-2">
+                          <span>{r.icon}</span>
+                          <span className="font-medium text-foreground">{en ? r.label_en : r.label_cn}</span>
+                          <span className="text-xs text-muted-foreground">({r.value})</span>
+                        </div>
+                        <Button variant="ghost" size="sm" className="h-7 text-destructive hover:text-destructive"
+                          onClick={() => removeSessionRole(r.id)}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="p-3 rounded-lg bg-secondary/20 border border-border space-y-3">
+                    <p className="text-sm font-medium text-foreground">{en ? 'Add New Role' : '添加新角色'}</p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                      <Input value={newRole.value} onChange={e => setNewRole(p => ({ ...p, value: e.target.value }))}
+                        placeholder={en ? 'Value (e.g. Violin)' : '值（如 Violin）'} className="bg-background border-border h-8 text-sm" />
+                      <Input value={newRole.label_en} onChange={e => setNewRole(p => ({ ...p, label_en: e.target.value }))}
+                        placeholder={en ? 'Label EN' : '英文标签'} className="bg-background border-border h-8 text-sm" />
+                      <Input value={newRole.label_cn} onChange={e => setNewRole(p => ({ ...p, label_cn: e.target.value }))}
+                        placeholder={en ? 'Label CN' : '中文标签'} className="bg-background border-border h-8 text-sm" />
+                      <Input value={newRole.icon} onChange={e => setNewRole(p => ({ ...p, icon: e.target.value }))}
+                        placeholder="🎵" className="bg-background border-border h-8 text-sm w-20" />
+                    </div>
+                    <Button size="sm" className="h-8 text-xs gap-1" onClick={handleAddRole}
+                      disabled={!newRole.value.trim() || !newRole.label_en.trim()}
+                    >
+                      <Plus className="w-3.5 h-3.5" /> {en ? 'Add Role' : '添加角色'}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             </TabsContent>
           </Tabs>
         </div>
