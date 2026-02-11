@@ -180,6 +180,36 @@ export type Database = {
           },
         ]
       }
+      session_roles: {
+        Row: {
+          created_at: string
+          icon: string | null
+          id: string
+          label_cn: string
+          label_en: string
+          sort_order: number
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          icon?: string | null
+          id?: string
+          label_cn: string
+          label_en: string
+          sort_order?: number
+          value: string
+        }
+        Update: {
+          created_at?: string
+          icon?: string | null
+          id?: string
+          label_cn?: string
+          label_en?: string
+          sort_order?: number
+          value?: string
+        }
+        Relationships: []
+      }
       session_songs: {
         Row: {
           artist: string
@@ -223,6 +253,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      session_types: {
+        Row: {
+          created_at: string
+          icon: string | null
+          id: string
+          label_cn: string
+          label_en: string
+          sort_order: number
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          icon?: string | null
+          id?: string
+          label_cn: string
+          label_en: string
+          sort_order?: number
+          value: string
+        }
+        Update: {
+          created_at?: string
+          icon?: string | null
+          id?: string
+          label_cn?: string
+          label_en?: string
+          sort_order?: number
+          value?: string
+        }
+        Relationships: []
       }
       sessions: {
         Row: {

@@ -1,36 +1,27 @@
 import { useState } from 'react';
-import { Mic2, Guitar, Drum, Music, Piano } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
+import type { SessionRole } from '@/hooks/useSessionConfig';
 
 interface Props {
   sessionType: string;
+  availableRoles?: SessionRole[];
   onSubmit: (name: string, roles: string[]) => Promise<void>;
   onCancel: () => void;
 }
 
-const allRoles = [
-  { id: 'vocal', icon: <Mic2 className="w-4 h-4" />, en: 'Vocal', zh: '主唱' },
-  { id: 'guitar', icon: <Guitar className="w-4 h-4" />, en: 'Guitar', zh: '吉他' },
-  { id: 'drums', icon: <Drum className="w-4 h-4" />, en: 'Drums', zh: '鼓' },
-  { id: 'bass', icon: <Music className="w-4 h-4" />, en: 'Bass', zh: '贝斯' },
-  { id: 'keyboard', icon: <Piano className="w-4 h-4" />, en: 'Keyboard', zh: '键盘' },
-];
-
-const RegistrationForm = ({ sessionType, onSubmit, onCancel }: Props) => {
+const RegistrationForm = ({ sessionType, availableRoles, onSubmit, onCancel }: Props) => {
   const { language } = useLanguage();
   const [name, setName] = useState('');
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
-  const availableRoles = sessionType === 'solo-vocal'
-    ? allRoles.filter((r) => r.id === 'vocal')
-    : allRoles;
+  const roles = availableRoles || [];
 
-  const toggleRole = (roleId: string) => {
+  const toggleRole = (roleValue: string) => {
     setSelectedRoles((prev) =>
-      prev.includes(roleId) ? prev.filter((r) => r !== roleId) : [...prev, roleId]
+      prev.includes(roleValue) ? prev.filter((r) => r !== roleValue) : [...prev, roleValue]
     );
   };
 
@@ -63,18 +54,18 @@ const RegistrationForm = ({ sessionType, onSubmit, onCancel }: Props) => {
           {language === 'zh' ? '选择角色（可多选）' : 'Choose role(s)'}
         </label>
         <div className="flex flex-wrap gap-2">
-          {availableRoles.map((role) => (
+          {roles.map((role) => (
             <button
-              key={role.id}
-              onClick={() => toggleRole(role.id)}
+              key={role.value}
+              onClick={() => toggleRole(role.value)}
               className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm transition-all ${
-                selectedRoles.includes(role.id)
+                selectedRoles.includes(role.value)
                   ? 'bg-primary/10 border-primary text-foreground'
                   : 'bg-background border-border text-muted-foreground hover:border-primary/50'
               }`}
             >
-              {role.icon}
-              {language === 'zh' ? role.zh : role.en}
+              <span>{role.icon}</span>
+              {language === 'zh' ? role.label_cn : role.label_en}
             </button>
           ))}
         </div>
