@@ -38,7 +38,7 @@ const contactSchema = z.object({
   phone: z.string().trim().min(1, 'Phone number is required').max(30),
   email: z.string().trim().email('Please enter a valid email').max(255),
   lessons: z.array(z.string()).default([]),
-  message: z.string().trim().min(1, 'Message is required').max(2000),
+  message: z.string().trim().max(2000).optional().default(''),
 });
 
 type ContactFormValues = z.infer<typeof contactSchema>;
@@ -111,19 +111,42 @@ const Contact = () => {
       <Layout>
         <section className="py-20 lg:py-28">
           <div className="container mx-auto px-4">
-            <Card className="max-w-lg mx-auto border-border">
-              <CardContent className="p-10 text-center space-y-6">
-                <CheckCircle2 className="w-16 h-16 text-primary mx-auto" />
-                <h2 className="font-display text-2xl md:text-3xl font-bold text-gradient">
-                  {language === 'zh' ? '感谢您的咨询！' : 'Thank You for Your Enquiry!'}
-                </h2>
-                <p className="text-muted-foreground leading-relaxed">
-                  {language === 'zh'
-                    ? '我们已收到您的咨询，我们的团队将在24小时内与您联系。'
-                    : 'We have received your enquiry. Our team will get back to you within 24 hours.'}
-                </p>
-              </CardContent>
-            </Card>
+            <div className="max-w-lg mx-auto text-center">
+              {/* Glowing circle with icon */}
+              <div className="relative mx-auto w-24 h-24 mb-8">
+                <div className="absolute inset-0 rounded-full bg-primary/20 animate-ping" />
+                <div className="relative w-24 h-24 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center backdrop-blur-sm">
+                  <CheckCircle2 className="w-12 h-12 text-primary" />
+                </div>
+              </div>
+
+              <h2 className="font-display text-3xl md:text-4xl font-bold mb-4 text-gradient">
+                {language === 'zh' ? '太棒了，我们收到啦！🎶' : "You're All Set! 🎶"}
+              </h2>
+
+              <Card className="border-primary/20 bg-card/50 backdrop-blur-sm mt-6">
+                <CardContent className="p-8 space-y-4">
+                  <p className="text-lg text-foreground leading-relaxed">
+                    {language === 'zh'
+                      ? '感谢您对我们的信任！我们的团队已经迫不及待地想要了解您的音乐之旅了。'
+                      : "Thanks for reaching out — we're excited to hear about your musical journey!"}
+                  </p>
+                  <p className="text-muted-foreground leading-relaxed">
+                    {language === 'zh'
+                      ? '我们会在24小时内回复您，敬请期待！🎵'
+                      : "Our team will be in touch within 24 hours. We can't wait to get started! 🎵"}
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Button
+                variant="outline"
+                className="mt-8 rounded-full"
+                onClick={() => setSubmitted(false)}
+              >
+                {language === 'zh' ? '提交另一个咨询' : 'Submit Another Enquiry'}
+              </Button>
+            </div>
           </div>
         </section>
       </Layout>
@@ -308,7 +331,7 @@ const Contact = () => {
                       name="message"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>{language === 'zh' ? '留言' : 'Message'} *</FormLabel>
+                          <FormLabel>{language === 'zh' ? '留言（选填）' : 'Message (optional)'}</FormLabel>
                           <FormControl>
                             <Textarea
                               placeholder={
