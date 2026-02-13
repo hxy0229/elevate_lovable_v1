@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      contact_enquiries: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          lessons: string[] | null
+          message: string
+          name: string
+          phone: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          lessons?: string[] | null
+          message: string
+          name: string
+          phone: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          lessons?: string[] | null
+          message?: string
+          name?: string
+          phone?: string
+        }
+        Relationships: []
+      }
       music_sheets: {
         Row: {
           content_text: string | null
