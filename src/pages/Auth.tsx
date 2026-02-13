@@ -18,7 +18,7 @@ const Auth = () => {
   const { toast } = useToast();
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState('');
+  const [emailOrUsername, setEmailOrUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -31,7 +31,7 @@ const Auth = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim() || !password.trim()) return;
+    if (!emailOrUsername.trim() || !password.trim()) return;
 
     if (!isLogin) {
       if (password !== confirmPassword) {
@@ -50,15 +50,32 @@ const Auth = () => {
 
     setSubmitting(true);
     if (isLogin) {
-      const { error } = await signIn(email, password);
+      let loginEmail = emailOrUsername.trim();
+      // If input doesn't look like an email, try to resolve username to email
+      if (!loginEmail.includes('@')) {
+        try {
+          const { data: resolvedEmail, error: lookupError } = await supabase.rpc('get_email_by_display_name', { lookup_name: loginEmail });
+          if (lookupError || !resolvedEmail) {
+            toast({ title: language === 'zh' ? '用户名或密码错误' : 'Invalid username or password', variant: 'destructive' });
+            setSubmitting(false);
+            return;
+          }
+          loginEmail = resolvedEmail;
+        } catch {
+          toast({ title: language === 'zh' ? '登录失败' : 'Login failed', variant: 'destructive' });
+          setSubmitting(false);
+          return;
+        }
+      }
+      const { error } = await signIn(loginEmail, password);
       if (error) {
         const msg = error.message?.includes('Invalid login')
-          ? (language === 'zh' ? '邮箱或密码错误' : 'Invalid email or password')
+          ? (language === 'zh' ? '邮箱/用户名或密码错误' : 'Invalid email/username or password')
           : error.message;
         toast({ title: msg, variant: 'destructive' });
       }
     } else {
-      const { error, data } = await signUp(email, password, displayName.trim());
+      const { error, data } = await signUp(emailOrUsername.trim(), password, displayName.trim());
       if (error) {
         const msg = error.message?.includes('already registered')
           ? (language === 'zh' ? '该邮箱已注册' : 'This email is already registered')
@@ -114,13 +131,17 @@ const Auth = () => {
                     </div>
                   )}
                   <div className="space-y-2">
-                    <Label htmlFor="email">{t('auth.email')}</Label>
+                    <Label htmlFor="email">
+                      {isLogin
+                        ? (language === 'zh' ? '邮箱或用户名' : 'Email or Username')
+                        : t('auth.email')}
+                    </Label>
                     <Input
                       id="email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="you@example.com"
+                      type={isLogin ? 'text' : 'email'}
+                      value={emailOrUsername}
+                      onChange={(e) => setEmailOrUsername(e.target.value)}
+                      placeholder={isLogin ? (language === 'zh' ? '邮箱或用户名' : 'Email or username') : 'you@example.com'}
                       className="rounded-xl h-12 bg-secondary border-border"
                       required
                     />
