@@ -109,7 +109,7 @@ const Lessons = () => {
                   </p>
                 </CardContent>
                 <CardFooter className="pt-2">
-                  <Link to="/contact" className="w-full">
+                  <Link to={`/contact?lesson=${lesson.id}`} className="w-full">
                     <Button 
                       variant="outline" 
                       className="w-full rounded-full group-hover:border-primary/50"
