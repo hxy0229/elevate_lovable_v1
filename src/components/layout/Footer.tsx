@@ -33,18 +33,18 @@ const Footer = () => {
             </h3>
             <ul className="space-y-2">
               <li>
-                <Link to="/packages" className="text-muted-foreground hover:text-primary transition-colors">
-                  {t('nav.packages')}
+                <Link to="/contact" className="text-muted-foreground hover:text-primary transition-colors">
+                  {language === 'en' ? 'Contact Us' : '联系我们'}
                 </Link>
               </li>
               <li>
-                <Link to="/rooms" className="text-muted-foreground hover:text-primary transition-colors">
-                  {t('nav.rooms')}
+                <Link to="/privacy" className="text-muted-foreground hover:text-primary transition-colors">
+                  {language === 'en' ? 'Privacy Policy' : '隐私政策'}
                 </Link>
               </li>
               <li>
-                <Link to="/sessions" className="text-muted-foreground hover:text-primary transition-colors">
-                  {t('nav.sessions')}
+                <Link to="/terms" className="text-muted-foreground hover:text-primary transition-colors">
+                  {language === 'en' ? 'Terms of Service' : '服务条款'}
                 </Link>
               </li>
             </ul>

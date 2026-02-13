@@ -1,11 +1,12 @@
-import { Mic2, Piano, Guitar, Drum, Music, ArrowRight } from 'lucide-react';
+import { Mic2, Piano, Guitar, Drum, Music } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useLanguage } from '@/contexts/LanguageContext';
 import Layout from '@/components/layout/Layout';
 
 const Lessons = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   const lessons = [
     {
@@ -22,9 +23,21 @@ const Lessons = () => {
     },
     {
       id: 'guitar',
-      name: t('lessons.guitar'),
+      name: language === 'zh' ? '吉他' : 'Guitar',
       icon: Guitar,
       image: 'https://images.unsplash.com/photo-1510915361894-db8b60106cb1?w=400',
+    },
+    {
+      id: 'ukulele',
+      name: language === 'zh' ? '尤克里里' : 'Ukulele',
+      icon: Guitar,
+      image: 'https://images.unsplash.com/photo-1556449895-a33c9dba33dd?w=400',
+    },
+    {
+      id: 'violin',
+      name: language === 'zh' ? '小提琴' : 'Violin',
+      icon: Music,
+      image: 'https://images.unsplash.com/photo-1612225330812-01a9c1b0add9?w=400',
     },
     {
       id: 'drums',
@@ -34,7 +47,7 @@ const Lessons = () => {
     },
     {
       id: 'bass',
-      name: t('lessons.bass'),
+      name: language === 'zh' ? '贝斯' : 'Bass',
       icon: Music,
       image: 'https://images.unsplash.com/photo-1605020420620-20c943cc4669?w=400',
     },
@@ -76,6 +89,7 @@ const Lessons = () => {
                     src={lesson.image}
                     alt={lesson.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    loading="lazy"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
                   <div className="absolute bottom-4 left-4">
@@ -95,13 +109,14 @@ const Lessons = () => {
                   </p>
                 </CardContent>
                 <CardFooter className="pt-2">
-                  <Button 
-                    variant="outline" 
-                    className="w-full rounded-full group-hover:border-primary/50"
-                  >
-                    {t('lessons.inquire')}
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
+                  <Link to="/contact" className="w-full">
+                    <Button 
+                      variant="outline" 
+                      className="w-full rounded-full group-hover:border-primary/50"
+                    >
+                      {language === 'zh' ? '立即咨询' : 'Enquire Now'}
+                    </Button>
+                  </Link>
                 </CardFooter>
               </Card>
             ))}
