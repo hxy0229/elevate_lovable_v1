@@ -175,6 +175,65 @@ export type Database = {
           },
         ]
       }
+      session_instances: {
+        Row: {
+          announcement: string | null
+          announcement_cn: string | null
+          created_at: string
+          end_time: string
+          id: string
+          instance_date: string
+          name_cn_override: string | null
+          name_override: string | null
+          session_id: string
+          start_time: string
+          status: Database["public"]["Enums"]["session_instance_status"]
+          theme: string | null
+          theme_cn: string | null
+          updated_at: string
+        }
+        Insert: {
+          announcement?: string | null
+          announcement_cn?: string | null
+          created_at?: string
+          end_time: string
+          id?: string
+          instance_date: string
+          name_cn_override?: string | null
+          name_override?: string | null
+          session_id: string
+          start_time: string
+          status?: Database["public"]["Enums"]["session_instance_status"]
+          theme?: string | null
+          theme_cn?: string | null
+          updated_at?: string
+        }
+        Update: {
+          announcement?: string | null
+          announcement_cn?: string | null
+          created_at?: string
+          end_time?: string
+          id?: string
+          instance_date?: string
+          name_cn_override?: string | null
+          name_override?: string | null
+          session_id?: string
+          start_time?: string
+          status?: Database["public"]["Enums"]["session_instance_status"]
+          theme?: string | null
+          theme_cn?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_instances_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       session_registrations: {
         Row: {
           display_name: string
@@ -401,6 +460,80 @@ export type Database = {
         }
         Relationships: []
       }
+      wishes: {
+        Row: {
+          accompanying_instrument:
+            | Database["public"]["Enums"]["accompanying_instrument"]
+            | null
+          artist: string
+          created_at: string
+          file_urls: string[]
+          id: string
+          instance_id: string
+          is_self_accompanied: boolean
+          primary_role: Database["public"]["Enums"]["wish_role"]
+          score_links: string[]
+          song_link: string | null
+          song_title: string
+          song_version: string | null
+          sort_order: number
+          special_requirements: string | null
+          updated_at: string
+          user_id: string
+          version: number
+        }
+        Insert: {
+          accompanying_instrument?:
+            | Database["public"]["Enums"]["accompanying_instrument"]
+            | null
+          artist?: string
+          created_at?: string
+          file_urls?: string[]
+          id?: string
+          instance_id: string
+          is_self_accompanied?: boolean
+          primary_role: Database["public"]["Enums"]["wish_role"]
+          score_links?: string[]
+          song_link?: string | null
+          song_title: string
+          song_version?: string | null
+          sort_order?: number
+          special_requirements?: string | null
+          updated_at?: string
+          user_id: string
+          version?: number
+        }
+        Update: {
+          accompanying_instrument?:
+            | Database["public"]["Enums"]["accompanying_instrument"]
+            | null
+          artist?: string
+          created_at?: string
+          file_urls?: string[]
+          id?: string
+          instance_id?: string
+          is_self_accompanied?: boolean
+          primary_role?: Database["public"]["Enums"]["wish_role"]
+          score_links?: string[]
+          song_link?: string | null
+          song_title?: string
+          song_version?: string | null
+          sort_order?: number
+          special_requirements?: string | null
+          updated_at?: string
+          user_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wishes_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "session_instances"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -419,7 +552,10 @@ export type Database = {
       }
     }
     Enums: {
+      accompanying_instrument: "guitar" | "keyboard"
       app_role: "admin" | "moderator" | "user"
+      session_instance_status: "draft" | "open" | "published"
+      wish_role: "vocal" | "guitar" | "keyboard" | "drum"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -547,7 +683,10 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      accompanying_instrument: ["guitar", "keyboard"],
       app_role: ["admin", "moderator", "user"],
+      session_instance_status: ["draft", "open", "published"],
+      wish_role: ["vocal", "guitar", "keyboard", "drum"],
     },
   },
 } as const
