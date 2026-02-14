@@ -399,21 +399,7 @@ const Admin = () => {
             placeholder="乐队排练"
           />
         </div>
-        <div className="space-y-1.5">
-          <label className="text-sm text-muted-foreground">{en ? "Type" : "类型"}</label>
-          <Select value={f.session_type} onValueChange={(v) => setF((p) => ({ ...p, session_type: v }))}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {sessionTypes.map((t) => (
-                <SelectItem key={t.value} value={t.value}>
-                  {t.icon} {en ? t.label_en : t.label_cn}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        
         <div className="space-y-1.5">
           <label className="text-sm text-muted-foreground">{en ? "Day of Week" : "星期几"}</label>
           <Select value={f.day_of_week} onValueChange={(v) => setF((p) => ({ ...p, day_of_week: v }))}>
@@ -437,30 +423,7 @@ const Admin = () => {
             onChange={(e) => setF((p) => ({ ...p, start_time: e.target.value }))}
           />
         </div>
-        <div className="space-y-1.5">
-          <label className="text-sm text-muted-foreground">{en ? "End Time" : "结束时间"}</label>
-          <Input type="time" value={f.end_time} onChange={(e) => setF((p) => ({ ...p, end_time: e.target.value }))} />
-        </div>
-        <div className="space-y-1.5">
-          <label className="text-sm text-muted-foreground">{en ? "Max Participants" : "最多人数"}</label>
-          <Input
-            type="number"
-            value={f.max_participants}
-            onChange={(e) => setF((p) => ({ ...p, max_participants: e.target.value }))}
-            min="1"
-            max="50"
-          />
-        </div>
-        <div className="space-y-1.5">
-          <label className="text-sm text-muted-foreground">{en ? "Max Songs" : "最多歌曲数量"}</label>
-          <Input
-            type="number"
-            value={f.max_songs}
-            onChange={(e) => setF((p) => ({ ...p, max_songs: e.target.value }))}
-            min="1"
-            max="50"
-          />
-        </div>
+        
         <div className="space-y-1.5">
           <label className="text-sm text-muted-foreground">{en ? "Session Date (optional)" : "活动日期（可选）"}</label>
           <Input
