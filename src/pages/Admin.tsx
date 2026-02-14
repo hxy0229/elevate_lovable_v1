@@ -471,31 +471,6 @@ const Admin = () => {
         </div>
       </div>
 
-      {/* Announcement */}
-      <div className="space-y-1.5">
-        <label className="text-sm text-muted-foreground flex items-center gap-1.5">
-          <Megaphone className="w-3.5 h-3.5" /> {en ? "Announcement (EN)" : "公告（英文）"}
-        </label>
-        <Textarea
-          value={f.announcement || ""}
-          onChange={(e) => setF((p) => ({ ...p, announcement: e.target.value }))}
-          placeholder={en ? "Optional announcement visible to all members..." : "对所有成员可见的公告..."}
-          className="bg-background border-border min-h-[60px]"
-          maxLength={500}
-        />
-      </div>
-      <div className="space-y-1.5">
-        <label className="text-sm text-muted-foreground flex items-center gap-1.5">
-          <Megaphone className="w-3.5 h-3.5" /> {en ? "Announcement (CN)" : "公告（中文）"}
-        </label>
-        <Textarea
-          value={f.announcement_cn || ""}
-          onChange={(e) => setF((p) => ({ ...p, announcement_cn: e.target.value }))}
-          placeholder={en ? "Chinese announcement..." : "中文公告..."}
-          className="bg-background border-border min-h-[60px]"
-          maxLength={500}
-        />
-      </div>
     </div>
   );
 
