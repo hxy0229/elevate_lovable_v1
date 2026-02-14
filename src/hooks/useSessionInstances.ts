@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdmin } from '@/hooks/useAdmin';
-import { addWeeks, format } from 'date-fns';
+import { addWeeks, addDays, format, parseISO, getDay } from 'date-fns';
 
 export interface SessionInstance {
   id: string;
@@ -82,6 +82,63 @@ export function useSessionInstances() {
     return { error };
   };
 
+  /**
+   * Generate recurring instances for a parent session.
+   * @param session - Parent session with day_of_week, start_time, end_time, recurrence_rule
+   * @param weeksAhead - How many weeks to generate (default 8)
+   */
+  const generateRecurringInstances = async (
+    session: {
+      id: string;
+      day_of_week: number;
+      start_time: string;
+      end_time: string;
+      recurrence_rule: string | null;
+    },
+    weeksAhead: number = 8
+  ) => {
+    const rule = session.recurrence_rule || 'weekly';
+    const today = new Date();
+    const dates: string[] = [];
+
+    // Find the next occurrence of the target day_of_week
+    let cursor = new Date(today);
+    const targetDay = session.day_of_week;
+    const currentDay = getDay(cursor);
+    const daysUntil = (targetDay - currentDay + 7) % 7 || 7; // at least 1 day ahead
+    cursor = addDays(cursor, daysUntil);
+
+    const increment = rule === 'biweekly' ? 2 : rule === 'monthly' ? 4 : 1;
+
+    for (let i = 0; i < weeksAhead; i++) {
+      dates.push(format(cursor, 'yyyy-MM-dd'));
+      cursor = addWeeks(cursor, increment);
+    }
+
+    // Filter out dates that already have instances
+    const existingDates = new Set(
+      instances
+        .filter(inst => inst.session_id === session.id)
+        .map(inst => inst.instance_date)
+    );
+    const newDates = dates.filter(d => !existingDates.has(d));
+
+    if (newDates.length === 0) {
+      return { created: 0, error: null };
+    }
+
+    const rows = newDates.map(d => ({
+      session_id: session.id,
+      instance_date: d,
+      start_time: session.start_time.substring(0, 5),
+      end_time: session.end_time.substring(0, 5),
+    }));
+
+    const { error } = await supabase.from('session_instances').insert(rows as any);
+    if (!error) await fetchInstances();
+    return { created: newDates.length, error };
+  };
+
   const updateInstance = async (id: string, updates: Record<string, any>) => {
     const { error } = await supabase.from('session_instances').update(updates as any).eq('id', id);
     if (!error) await fetchInstances();
@@ -102,6 +159,7 @@ export function useSessionInstances() {
     instances,
     loading,
     createInstance,
+    generateRecurringInstances,
     updateInstance,
     deleteInstance,
     setInstanceStatus,

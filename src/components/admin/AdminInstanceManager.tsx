@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import {
   Plus, Trash2, Eye, EyeOff, Send, ChevronDown, ChevronUp,
-  Clock, Calendar, AlertTriangle,
+  Clock, Calendar, AlertTriangle, RefreshCw, Image,
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSessionInstances, type SessionInstance } from '@/hooks/useSessionInstances';
@@ -19,6 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { formatTime12h, formatSessionDate, calculateSchedule } from '@/lib/timeUtils';
 import WishCard from '@/components/sessions/WishCard';
 import WishForm from '@/components/sessions/WishForm';
+import InstancePoster from '@/components/sessions/InstancePoster';
 
 interface AdminInstanceManagerProps {
   sessions: any[];
@@ -36,7 +37,7 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
   const en = language === 'en';
   const { toast } = useToast();
   const {
-    instances, loading, createInstance, updateInstance, deleteInstance, setInstanceStatus,
+    instances, loading, createInstance, generateRecurringInstances, updateInstance, deleteInstance, setInstanceStatus,
   } = useSessionInstances();
   const {
     wishes, createWish, updateWish, deleteWish, reorderWishes, uploadWishFile,
@@ -46,6 +47,8 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
   const [expandedInstances, setExpandedInstances] = useState<Set<string>>(new Set());
   const [showWishForm, setShowWishForm] = useState<string | null>(null);
   const [publishConfirm, setPublishConfirm] = useState<SessionInstance | null>(null);
+  const [showPoster, setShowPoster] = useState<string | null>(null);
+  const [generatingRecurring, setGeneratingRecurring] = useState(false);
 
   const [form, setForm] = useState({
     session_id: '',
@@ -114,13 +117,42 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center flex-wrap gap-2">
         <h2 className="font-display text-xl font-semibold text-foreground">
           {en ? 'Session Instances' : '活动实例'}
         </h2>
-        <Button onClick={() => setShowCreateForm(!showCreateForm)} className="rounded-full gap-1.5">
-          <Plus className="w-4 h-4" /> {en ? 'New Instance' : '新建实例'}
-        </Button>
+        <div className="flex gap-2">
+          <Select onValueChange={async (sessionId) => {
+            const session = sessions.find(s => s.id === sessionId);
+            if (!session) return;
+            setGeneratingRecurring(true);
+            const { created, error } = await generateRecurringInstances({
+              id: session.id,
+              day_of_week: session.day_of_week,
+              start_time: session.start_time,
+              end_time: session.end_time,
+              recurrence_rule: session.recurrence_rule,
+            });
+            setGeneratingRecurring(false);
+            if (error) toast({ title: 'Failed', description: error.message, variant: 'destructive' });
+            else toast({ title: en ? `Generated ${created} instances` : `已生成 ${created} 个实例` });
+          }}>
+            <SelectTrigger className="w-auto gap-1.5 rounded-full" disabled={generatingRecurring}>
+              <RefreshCw className={`w-4 h-4 ${generatingRecurring ? 'animate-spin' : ''}`} />
+              <SelectValue placeholder={en ? 'Auto-Generate' : '批量生成'} />
+            </SelectTrigger>
+            <SelectContent>
+              {sessions.filter(s => !s.is_archived && s.recurrence_rule).map(s => (
+                <SelectItem key={s.id} value={s.id}>
+                  {en ? s.name : (s.name_cn || s.name)} ({s.recurrence_rule})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button onClick={() => setShowCreateForm(!showCreateForm)} className="rounded-full gap-1.5">
+            <Plus className="w-4 h-4" /> {en ? 'New Instance' : '新建实例'}
+          </Button>
+        </div>
       </div>
 
       {/* Create Form */}
@@ -214,6 +246,17 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
                     <StatusIcon className="w-3.5 h-3.5" />
                     {en ? statusAction.labelEn : statusAction.labelCn}
                   </Button>
+                  {instance.status === 'published' && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5 text-xs"
+                      onClick={() => setShowPoster(showPoster === instance.id ? null : instance.id)}
+                    >
+                      <Image className="w-3.5 h-3.5" />
+                      {en ? 'Poster' : '海报'}
+                    </Button>
+                  )}
                   {instance.status === 'draft' && (
                     <Button
                       variant="ghost"
@@ -285,6 +328,15 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
                     </Button>
                   )}
                 </div>
+              )}
+
+              {/* Poster */}
+              {showPoster === instance.id && instance.status === 'published' && (
+                <InstancePoster
+                  instance={instance}
+                  wishes={instanceWishes}
+                  profileMap={profileMap}
+                />
               )}
             </CardContent>
           </Card>
