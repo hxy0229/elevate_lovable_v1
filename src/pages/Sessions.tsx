@@ -1,23 +1,23 @@
 import { useLanguage } from '@/contexts/LanguageContext';
 import Layout from '@/components/layout/Layout';
-import SessionCard from '@/components/sessions/SessionCard';
-import { useSessionData } from '@/hooks/useSessionData';
-import { useMusicSheets } from '@/hooks/useMusicSheets';
-import { useSessionConfig } from '@/hooks/useSessionConfig';
+import { useSessionInstances } from '@/hooks/useSessionInstances';
+import { useWishes } from '@/hooks/useWishes';
+import { useAdmin } from '@/hooks/useAdmin';
+import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
+import SessionInstanceCard from '@/components/sessions/SessionInstanceCard';
 
 const Sessions = () => {
   const { t } = useLanguage();
+  const { user } = useAuth();
+  const { isAdmin } = useAdmin();
+  const { instances, loading: instancesLoading } = useSessionInstances();
   const {
-    sessions, registrations, songs, contents, user, loading,
-    register, unregister, addSong, removeSong, updateTheme,
-    uploadContent, deleteContent,
-  } = useSessionData();
-  const { sheets, uploadSheet, deleteSheet } = useMusicSheets();
-  const { sessionTypes, sessionRoles } = useSessionConfig();
+    wishes, loading: wishesLoading,
+    createWish, updateWish, deleteWish, uploadWishFile,
+  } = useWishes();
 
-  // Filter out archived sessions for regular users
-  const activeSessions = sessions.filter(s => !(s as any).is_archived);
+  const loading = instancesLoading || wishesLoading;
 
   return (
     <Layout>
@@ -38,31 +38,24 @@ const Sessions = () => {
               Array.from({ length: 3 }).map((_, i) => (
                 <Skeleton key={i} className="h-64 rounded-xl" />
               ))
-            ) : activeSessions.length === 0 ? (
+            ) : instances.length === 0 ? (
               <p className="text-center text-muted-foreground py-12">
-                No sessions scheduled yet.
+                {isAdmin
+                  ? 'No session instances yet. Create one from the Admin panel.'
+                  : 'No upcoming sessions. Check back soon!'}
               </p>
             ) : (
-              activeSessions.map((session) => (
-                <SessionCard
-                  key={session.id}
-                  session={session}
-                  registrations={registrations.filter((r) => r.session_id === session.id)}
-                  songs={songs.filter((s) => s.session_id === session.id)}
-                  contents={contents.filter((c) => c.session_id === session.id)}
-                  musicSheets={sheets.filter((s) => s.session_id === session.id)}
-                  sessionTypes={sessionTypes}
-                  sessionRoles={sessionRoles}
-                  user={user}
-                  onRegister={register}
-                  onUnregister={unregister}
-                  onAddSong={addSong}
-                  onRemoveSong={removeSong}
-                  onUpdateTheme={updateTheme}
-                  onUploadContent={uploadContent}
-                  onDeleteContent={deleteContent}
-                  onUploadSheet={uploadSheet}
-                  onDeleteSheet={deleteSheet}
+              instances.map((instance) => (
+                <SessionInstanceCard
+                  key={instance.id}
+                  instance={instance}
+                  isAdmin={isAdmin}
+                  userId={user?.id}
+                  wishes={wishes.filter(w => w.instance_id === instance.id)}
+                  onCreateWish={createWish}
+                  onUpdateWish={updateWish}
+                  onDeleteWish={deleteWish}
+                  onUploadFile={uploadWishFile}
                 />
               ))
             )}

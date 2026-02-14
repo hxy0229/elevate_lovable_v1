@@ -1,0 +1,223 @@
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { X, Upload, Plus, Link as LinkIcon } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
+import type { WishRole, AccompanyingInstrument, WishInput, Wish } from '@/hooks/useWishes';
+
+interface WishFormProps {
+  instanceId: string;
+  existingWish?: Wish;
+  onSubmit: (input: WishInput) => Promise<boolean>;
+  onCancel: () => void;
+  onUploadFile?: (instanceId: string, file: File) => Promise<string | null>;
+}
+
+const ROLE_OPTIONS: { value: WishRole; labelEn: string; labelCn: string; icon: string }[] = [
+  { value: 'vocal', labelEn: 'Vocal', labelCn: '主唱', icon: '🎤' },
+  { value: 'guitar', labelEn: 'Guitar', labelCn: '吉他', icon: '🎸' },
+  { value: 'keyboard', labelEn: 'Keyboard', labelCn: '键盘', icon: '🎹' },
+  { value: 'drum', labelEn: 'Drum', labelCn: '鼓', icon: '🥁' },
+];
+
+const WishForm = ({ instanceId, existingWish, onSubmit, onCancel, onUploadFile }: WishFormProps) => {
+  const { language } = useLanguage();
+  const en = language === 'en';
+
+  const [songTitle, setSongTitle] = useState(existingWish?.song_title || '');
+  const [artist, setArtist] = useState(existingWish?.artist || '');
+  const [primaryRole, setPrimaryRole] = useState<WishRole>(existingWish?.primary_role || 'vocal');
+  const [isSelfAccompanied, setIsSelfAccompanied] = useState(existingWish?.is_self_accompanied || false);
+  const [accompInstrument, setAccompInstrument] = useState<AccompanyingInstrument | ''>(existingWish?.accompanying_instrument || '');
+  const [songVersion, setSongVersion] = useState(existingWish?.song_version || '');
+  const [songLink, setSongLink] = useState(existingWish?.song_link || '');
+  const [scoreLinks, setScoreLinks] = useState<string[]>(existingWish?.score_links || []);
+  const [fileUrls, setFileUrls] = useState<string[]>(existingWish?.file_urls || []);
+  const [specialReqs, setSpecialReqs] = useState(existingWish?.special_requirements || '');
+  const [newScoreLink, setNewScoreLink] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!songTitle.trim()) return;
+    setSubmitting(true);
+    const input: WishInput = {
+      instance_id: instanceId,
+      song_title: songTitle.trim(),
+      artist: artist.trim(),
+      primary_role: primaryRole,
+      is_self_accompanied: isSelfAccompanied,
+      accompanying_instrument: isSelfAccompanied && accompInstrument ? accompInstrument : null,
+      song_version: songVersion.trim() || undefined,
+      song_link: songLink.trim() || undefined,
+      score_links: scoreLinks,
+      file_urls: fileUrls,
+      special_requirements: specialReqs.trim() || undefined,
+    };
+    const ok = await onSubmit(input);
+    setSubmitting(false);
+    if (ok) onCancel();
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !onUploadFile) return;
+    setUploading(true);
+    const url = await onUploadFile(instanceId, file);
+    if (url) setFileUrls(prev => [...prev, url]);
+    setUploading(false);
+    e.target.value = '';
+  };
+
+  const addScoreLink = () => {
+    if (newScoreLink.trim()) {
+      setScoreLinks(prev => [...prev, newScoreLink.trim()]);
+      setNewScoreLink('');
+    }
+  };
+
+  return (
+    <Card className="border-primary/30 bg-card/80 backdrop-blur-sm">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg font-display">
+          {existingWish
+            ? (en ? 'Edit Wish' : '编辑心愿')
+            : (en ? 'Make a Wish 🎶' : '许一个心愿 🎶')}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Song Title & Artist */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label>{en ? 'Song Title' : '歌曲名称'} *</Label>
+            <Input value={songTitle} onChange={e => setSongTitle(e.target.value)} placeholder={en ? 'Enter song title' : '输入歌曲名称'} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>{en ? 'Artist' : '歌手/乐队'}</Label>
+            <Input value={artist} onChange={e => setArtist(e.target.value)} placeholder={en ? 'Original artist' : '原唱'} />
+          </div>
+        </div>
+
+        {/* Primary Role */}
+        <div className="space-y-1.5">
+          <Label>{en ? 'Primary Role' : '主要角色'} *</Label>
+          <div className="flex flex-wrap gap-2">
+            {ROLE_OPTIONS.map(r => (
+              <Button
+                key={r.value}
+                type="button"
+                variant={primaryRole === r.value ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setPrimaryRole(r.value)}
+                className="gap-1.5"
+              >
+                {r.icon} {en ? r.labelEn : r.labelCn}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        {/* Self-Accompanied */}
+        <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/30 border border-border">
+          <Switch checked={isSelfAccompanied} onCheckedChange={setIsSelfAccompanied} />
+          <Label className="cursor-pointer">{en ? 'Self-Accompanied (弹唱)' : '弹唱'}</Label>
+          {isSelfAccompanied && (
+            <Select value={accompInstrument} onValueChange={(v) => setAccompInstrument(v as AccompanyingInstrument)}>
+              <SelectTrigger className="w-36">
+                <SelectValue placeholder={en ? 'Instrument' : '乐器'} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="guitar">🎸 {en ? 'Guitar' : '吉他'}</SelectItem>
+                <SelectItem value="keyboard">🎹 {en ? 'Keyboard' : '键盘'}</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+
+        {/* Song Version */}
+        <div className="space-y-1.5">
+          <Label>{en ? 'Song Version (调式 / Version)' : '调式/版本'}</Label>
+          <Input value={songVersion} onChange={e => setSongVersion(e.target.value)} placeholder={en ? 'e.g., Original key, -2 semitones' : '例：原调、降2个半音'} />
+        </div>
+
+        {/* Song / Accompaniment Link */}
+        <div className="space-y-1.5">
+          <Label>{en ? 'Song / Accompaniment Link' : '歌曲/伴奏链接'}</Label>
+          <Input value={songLink} onChange={e => setSongLink(e.target.value)} placeholder="https://..." />
+        </div>
+
+        {/* Score Links */}
+        <div className="space-y-2">
+          <Label>{en ? 'Score Links (Music Sheets & Lyrics)' : '谱面链接（乐谱和歌词）'}</Label>
+          {scoreLinks.map((link, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <LinkIcon className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+              <a href={link} target="_blank" rel="noopener" className="text-sm text-primary truncate hover:underline flex-1">{link}</a>
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setScoreLinks(prev => prev.filter((_, idx) => idx !== i))}>
+                <X className="w-3 h-3" />
+              </Button>
+            </div>
+          ))}
+          <div className="flex gap-2">
+            <Input value={newScoreLink} onChange={e => setNewScoreLink(e.target.value)} placeholder="https://..." className="flex-1" onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addScoreLink())} />
+            <Button variant="outline" size="sm" onClick={addScoreLink} disabled={!newScoreLink.trim()}>
+              <Plus className="w-3.5 h-3.5" />
+            </Button>
+          </div>
+        </div>
+
+        {/* File Uploads */}
+        <div className="space-y-2">
+          <Label>{en ? 'File Uploads (PDF, PNG, TXT, etc.)' : '文件上传（PDF、PNG、TXT等）'}</Label>
+          {fileUrls.map((url, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <a href={url} target="_blank" rel="noopener" className="text-sm text-primary truncate hover:underline flex-1">
+                {url.split('/').pop()}
+              </a>
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setFileUrls(prev => prev.filter((_, idx) => idx !== i))}>
+                <X className="w-3 h-3" />
+              </Button>
+            </div>
+          ))}
+          <div>
+            <label className="flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-border cursor-pointer hover:border-primary/50 transition-colors text-sm text-muted-foreground">
+              <Upload className="w-4 h-4" />
+              {uploading ? (en ? 'Uploading...' : '上传中...') : (en ? 'Upload file' : '上传文件')}
+              <input type="file" className="hidden" onChange={handleFileUpload} disabled={uploading} accept=".pdf,.png,.jpg,.jpeg,.txt,.doc,.docx" />
+            </label>
+          </div>
+        </div>
+
+        {/* Special Requirements */}
+        <div className="space-y-1.5">
+          <Label>{en ? 'Special Requirements' : '特殊要求'}</Label>
+          <Textarea
+            value={specialReqs}
+            onChange={e => setSpecialReqs(e.target.value)}
+            placeholder={en ? 'e.g., Need to leave before 9pm, specific sound effects...' : '例：需要9点前离开、需要特定音效...'}
+            rows={2}
+          />
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-3 pt-2">
+          <Button onClick={handleSubmit} disabled={!songTitle.trim() || submitting} className="flex-1">
+            {submitting
+              ? (en ? 'Saving...' : '保存中...')
+              : existingWish
+                ? (en ? 'Update Wish' : '更新心愿')
+                : (en ? 'Submit Wish' : '提交心愿')}
+          </Button>
+          <Button variant="outline" onClick={onCancel}>{en ? 'Cancel' : '取消'}</Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default WishForm;
