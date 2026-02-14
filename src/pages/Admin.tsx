@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import AdminInstanceManager from "@/components/admin/AdminInstanceManager";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,7 @@ import {
   ChevronUp,
   Settings,
   UserPlus,
+  Sparkles,
 } from "lucide-react";
 
 interface ProfileRow {
@@ -920,6 +922,9 @@ const Admin = () => {
               <TabsTrigger value="sessions" className="gap-1.5">
                 <Calendar className="w-4 h-4" /> {en ? "Sessions" : "活动"}
               </TabsTrigger>
+              <TabsTrigger value="instances" className="gap-1.5">
+                <Sparkles className="w-4 h-4" /> {en ? "Instances" : "实例"}
+              </TabsTrigger>
               <TabsTrigger value="members" className="gap-1.5">
                 <Users className="w-4 h-4" /> {en ? "Members" : "会员"}
               </TabsTrigger>
@@ -980,6 +985,14 @@ const Admin = () => {
                   {showArchived && archivedSessions.map((session) => renderSessionCard(session, true))}
                 </div>
               )}
+            </TabsContent>
+
+            {/* Instances Tab */}
+            <TabsContent value="instances">
+              <AdminInstanceManager
+                sessions={sessions}
+                profiles={profiles.map(p => ({ user_id: p.user_id, display_name: p.display_name }))}
+              />
             </TabsContent>
 
             {/* Members Tab */}
