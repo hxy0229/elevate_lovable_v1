@@ -37,7 +37,7 @@ const Lessons = () => {
       id: 'violin',
       name: language === 'zh' ? '小提琴' : 'Violin',
       icon: Music,
-      image: 'https://images.unsplash.com/photo-1612225330812-01a9c1b0add9?w=400',
+      image: 'https://images.unsplash.com/photo-1564186763535-ebb21ef5277f?w=400',
     },
     {
       id: 'drums',

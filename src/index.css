@@ -130,6 +130,7 @@
   
   .text-gradient {
     @apply bg-clip-text text-transparent bg-gradient-to-r from-primary via-gold-light to-primary;
+    padding-bottom: 0.15em;
   }
   
   .glass-effect {

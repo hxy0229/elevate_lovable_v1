@@ -3,10 +3,12 @@ import { Music, Users, Calendar, Mic2, Guitar, GraduationCap } from 'lucide-reac
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import Layout from '@/components/layout/Layout';
 
 const Index = () => {
   const { t } = useLanguage();
+  const { user } = useAuth();
 
   const features = [
     {
@@ -128,17 +130,35 @@ const Index = () => {
             <CardContent className="p-12 md:p-16 text-center relative">
               <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-px bg-gradient-to-r from-transparent via-primary to-transparent" />
               
-              <h2 className="font-display text-3xl md:text-4xl font-bold mb-4">
-                {t('home.welcome')}
-              </h2>
-              <p className="text-lg text-muted-foreground mb-8 max-w-xl mx-auto">
-                {t('home.subtitle')}
-              </p>
-              <Link to="/auth">
-                <Button size="lg" className="rounded-full font-semibold px-10 h-12 gold-glow">
-                  {t('nav.signup')}
-                </Button>
-              </Link>
+              {user ? (
+                <>
+                  <h2 className="font-display text-3xl md:text-4xl font-bold mb-4">
+                    {t('home.feature.sessions')}
+                  </h2>
+                  <p className="text-lg text-muted-foreground mb-8 max-w-xl mx-auto">
+                    {t('home.feature.sessions.desc')}
+                  </p>
+                  <Link to="/sessions">
+                    <Button size="lg" className="rounded-full font-semibold px-10 h-12 gold-glow">
+                      🎶 Submit a Wish
+                    </Button>
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <h2 className="font-display text-3xl md:text-4xl font-bold mb-4">
+                    {t('home.welcome')}
+                  </h2>
+                  <p className="text-lg text-muted-foreground mb-8 max-w-xl mx-auto">
+                    {t('home.subtitle')}
+                  </p>
+                  <Link to="/auth">
+                    <Button size="lg" className="rounded-full font-semibold px-10 h-12 gold-glow">
+                      {t('nav.signup')}
+                    </Button>
+                  </Link>
+                </>
+              )}
               
               <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-32 h-px bg-gradient-to-r from-transparent via-primary to-transparent" />
             </CardContent>

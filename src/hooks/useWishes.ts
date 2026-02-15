@@ -75,7 +75,7 @@ export function useWishes() {
       return false;
     }
 
-    const { error } = await supabase.from('wishes').insert({
+    const insertData = {
       instance_id: input.instance_id,
       user_id: input.user_id || user.id,
       song_title: input.song_title,
@@ -88,11 +88,16 @@ export function useWishes() {
       score_links: input.score_links || [],
       file_urls: input.file_urls || [],
       special_requirements: input.special_requirements || null,
-    } as any);
+    };
+
+    const { data, error } = await supabase.from('wishes').insert(insertData as any).select().single();
 
     if (error) {
       toast({ title: 'Failed to create wish', description: error.message, variant: 'destructive' });
       return false;
+    }
+    if (data) {
+      setWishes(prev => [...prev, data as any]);
     }
     toast({ title: 'Wish created! 🎶' });
     return true;
@@ -128,9 +133,11 @@ export function useWishes() {
   };
 
   const deleteWish = async (id: string) => {
+    setWishes(prev => prev.filter(w => w.id !== id));
     const { error } = await supabase.from('wishes').delete().eq('id', id);
     if (error) {
       toast({ title: 'Delete failed', description: error.message, variant: 'destructive' });
+      await fetchWishes();
       return false;
     }
     return true;
