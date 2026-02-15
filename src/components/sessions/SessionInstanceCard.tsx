@@ -52,12 +52,11 @@ const SessionInstanceCard = ({
 
   // Fetch display names for admin view
   useEffect(() => {
-    if (isAdmin && wishes.length > 0) {
-      const userIds = [...new Set(wishes.map(w => w.user_id))];
+    if (isAdmin) {
+      // Fetch all profiles so admin can create wishes on behalf of any user
       supabase
         .from('profiles')
         .select('user_id, display_name')
-        .in('user_id', userIds)
         .then(({ data }) => {
           if (data) {
             const map: Record<string, string> = {};
@@ -66,7 +65,7 @@ const SessionInstanceCard = ({
           }
         });
     }
-  }, [isAdmin, wishes]);
+  }, [isAdmin]);
 
   // Determine which wishes to show
   const visibleWishes = isAdmin ? wishes : myWishes;
@@ -94,7 +93,7 @@ const SessionInstanceCard = ({
           <div className="flex items-center gap-2 text-muted-foreground">
             <Clock className="w-4 h-4 text-primary" />
             <span className="text-sm">
-              {formatTime12h(instance.start_time)} – {formatTime12h(instance.end_time)}
+              {formatTime12h(instance.start_time)}
             </span>
           </div>
         </div>
@@ -180,6 +179,7 @@ const SessionInstanceCard = ({
             onSubmit={onCreateWish}
             onCancel={() => setShowWishForm(false)}
             onUploadFile={onUploadFile}
+            profiles={isAdmin ? Object.entries(profiles).map(([user_id, display_name]) => ({ user_id, display_name })) : undefined}
           />
         )}
 
