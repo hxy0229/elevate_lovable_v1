@@ -63,7 +63,6 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
   const [form, setForm] = useState({
     name: '',
     name_cn: '',
-    session_type: '',
     day_of_week: '2',
     start_time: '19:30',
     end_time: '21:30',
@@ -82,7 +81,7 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
     const { error } = await createSession({
       name: form.name,
       name_cn: form.name_cn,
-      session_type: form.session_type || defaultType,
+      session_type: defaultType,
       day_of_week: parseInt(form.day_of_week),
       start_time: form.start_time,
       end_time: form.end_time,
@@ -127,7 +126,7 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
     }
 
     setShowCreateForm(false);
-    setForm({ name: '', name_cn: '', session_type: '', day_of_week: '2', start_time: '19:30', end_time: '21:30', recurrence_rule: 'weekly' });
+    setForm({ name: '', name_cn: '', day_of_week: '2', start_time: '19:30', end_time: '21:30', recurrence_rule: 'weekly' });
     setCreating(false);
     await refetch();
   };
@@ -288,19 +287,6 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
                 <label className="text-sm text-muted-foreground">{en ? 'Start Time' : '开始时间'}</label>
                 <Input type="time" value={form.start_time} onChange={e => setForm(f => ({ ...f, start_time: e.target.value }))} />
               </div>
-              {sessionTypes.length > 0 && (
-                <div className="space-y-1.5">
-                  <label className="text-sm text-muted-foreground">{en ? 'Type' : '类型'}</label>
-                  <Select value={form.session_type || defaultType} onValueChange={v => setForm(f => ({ ...f, session_type: v }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {sessionTypes.map(t => (
-                        <SelectItem key={t.value} value={t.value}>{t.icon} {en ? t.label_en : t.label_cn}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
               <div className="space-y-1.5">
                 <label className="text-sm text-muted-foreground flex items-center gap-1.5">
                   <RefreshCw className="w-3.5 h-3.5" /> {en ? 'Recurrence' : '重复规则'}
