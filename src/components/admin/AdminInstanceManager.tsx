@@ -9,8 +9,9 @@ import {
 } from '@/components/ui/dialog';
 import {
   Plus, Trash2, Send, EyeOff, ChevronDown, ChevronUp,
-  Clock, AlertTriangle, RefreshCw, Image, Edit2, ArrowUp, ArrowDown, Save, X,
+  Clock, AlertTriangle, RefreshCw, Image, Edit2, ArrowUp, ArrowDown, Save, X, CheckSquare, Square,
 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSessionInstances, type SessionInstance } from '@/hooks/useSessionInstances';
 import { useWishes, type WishInput } from '@/hooks/useWishes';
@@ -55,6 +56,8 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
   const [showPoster, setShowPoster] = useState<string | null>(null);
   const [editingInstance, setEditingInstance] = useState<SessionInstance | null>(null);
   const [creating, setCreating] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
 
   // Simplified create form — creates parent session + generates instances in one step
   const [form, setForm] = useState({
@@ -177,6 +180,37 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
     else toast({ title: en ? `Generated ${created} new dates` : `生成了 ${created} 个新日期` });
   };
 
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === instances.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(instances.map(i => i.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    let failed = 0;
+    for (const id of selectedIds) {
+      const { error } = await deleteInstance(id);
+      if (error) failed++;
+    }
+    if (failed > 0) {
+      toast({ title: en ? `${failed} failed to delete` : `${failed} 个删除失败`, variant: 'destructive' });
+    } else {
+      toast({ title: en ? `Deleted ${selectedIds.size} sessions` : `已删除 ${selectedIds.size} 个活动` });
+    }
+    setSelectedIds(new Set());
+    setDeleteConfirm(false);
+  };
+
   // Group instances by parent session for the "Generate More" dropdown
   const recurringSessionIds = [...new Set(instances.map(i => i.session_id))];
   const recurringSessions = sessions.filter(s => recurringSessionIds.includes(s.id) && s.recurrence_rule);
@@ -185,9 +219,22 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
     <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center flex-wrap gap-2">
-        <h2 className="font-display text-xl font-semibold text-foreground">
-          {en ? 'Weekly Sessions' : '每周活动'}
-        </h2>
+        <div className="flex items-center gap-3">
+          <h2 className="font-display text-xl font-semibold text-foreground">
+            {en ? 'Weekly Sessions' : '每周活动'}
+          </h2>
+          {instances.length > 0 && (
+            <button onClick={toggleSelectAll} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+              {selectedIds.size === instances.length ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+              {en ? 'Select All' : '全选'}
+            </button>
+          )}
+          {selectedIds.size > 0 && (
+            <Button variant="destructive" size="sm" className="rounded-full gap-1.5" onClick={() => setDeleteConfirm(true)}>
+              <Trash2 className="w-3.5 h-3.5" /> {en ? `Delete (${selectedIds.size})` : `删除 (${selectedIds.size})`}
+            </Button>
+          )}
+        </div>
         <div className="flex gap-2">
           {recurringSessions.length > 0 && (
             <Select onValueChange={handleGenerateMore}>
@@ -300,10 +347,15 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
         const isPublished = instance.status === 'published';
 
         return (
-          <Card key={instance.id} className="border-border">
+          <Card key={instance.id} className={`border-border ${selectedIds.has(instance.id) ? 'ring-2 ring-primary/40' : ''}`}>
             <CardHeader className="bg-secondary/30 border-b border-border py-4">
               <div className="flex justify-between items-start gap-2">
-                <div className="flex-1 min-w-0">
+                <div className="flex items-start gap-3 flex-1 min-w-0">
+                  <Checkbox
+                    checked={selectedIds.has(instance.id)}
+                    onCheckedChange={() => toggleSelect(instance.id)}
+                    className="mt-1"
+                  />
                   <div className="flex items-center gap-2 flex-wrap mb-1">
                     <Badge
                       variant={isPublished ? 'default' : 'outline'}
@@ -458,6 +510,27 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
           <DialogFooter>
             <Button variant="outline" onClick={() => setPublishConfirm(null)}>{en ? 'Cancel' : '取消'}</Button>
             <Button onClick={confirmPublish}>{en ? 'Publish' : '发布'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <Dialog open={deleteConfirm} onOpenChange={setDeleteConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-destructive" />
+              {en ? 'Confirm Bulk Delete' : '确认批量删除'}
+            </DialogTitle>
+            <DialogDescription>
+              {en
+                ? `Are you sure you want to delete ${selectedIds.size} session(s)? This cannot be undone.`
+                : `确定要删除 ${selectedIds.size} 个活动吗？此操作不可撤销。`}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirm(false)}>{en ? 'Cancel' : '取消'}</Button>
+            <Button variant="destructive" onClick={handleBulkDelete}>{en ? 'Delete' : '删除'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
