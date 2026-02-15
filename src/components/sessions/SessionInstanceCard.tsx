@@ -24,7 +24,7 @@ interface SessionInstanceCardProps {
 }
 
 const STATUS_CONFIG = {
-  draft: { labelEn: 'Draft', labelCn: '草稿', variant: 'secondary' as const },
+  draft: { labelEn: 'Open for Wishes', labelCn: '开放点歌', variant: 'default' as const },
   open: { labelEn: 'Open for Wishes', labelCn: '开放点歌', variant: 'default' as const },
   published: { labelEn: 'Published', labelCn: '已发布', variant: 'outline' as const },
 };
@@ -41,11 +41,11 @@ const SessionInstanceCard = ({
   const session = instance.session;
   const sessionName = instance.name_override || (en ? session?.name : (session?.name_cn || session?.name)) || '';
   const statusConfig = STATUS_CONFIG[instance.status];
-  const isOpen = instance.status === 'open';
+  const isEditable = instance.status !== 'published';
   const isPublished = instance.status === 'published';
 
   const myWishes = wishes.filter(w => w.user_id === userId);
-  const canAddWish = isOpen && userId;
+  const canAddWish = isEditable && userId;
 
   // Calculate schedule
   const schedule = calculateSchedule(instance.start_time, wishes.length);
@@ -77,7 +77,7 @@ const SessionInstanceCard = ({
         <div className="flex justify-between items-start">
           <div className="space-y-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <Badge variant={statusConfig.variant} className={instance.status === 'open' ? 'bg-primary/20 text-primary border-primary/40' : ''}>
+              <Badge variant={statusConfig.variant} className={isEditable ? 'bg-primary/20 text-primary border-primary/40' : ''}>
                 {en ? statusConfig.labelEn : statusConfig.labelCn}
               </Badge>
               <span className="text-sm font-medium text-muted-foreground">
@@ -137,7 +137,7 @@ const SessionInstanceCard = ({
                   index={i}
                   timeSlot={isPublished ? schedule.times[wishes.indexOf(wish)] : undefined}
                   isOwner={wish.user_id === userId}
-                  isEditable={isOpen || isAdmin}
+                  isEditable={isEditable || isAdmin}
                   showUsername={isAdmin ? profiles[wish.user_id] || '—' : undefined}
                   onUpdate={onUpdateWish}
                   onDelete={onDeleteWish}
@@ -184,7 +184,7 @@ const SessionInstanceCard = ({
         )}
 
         {/* Login prompt */}
-        {!userId && isOpen && (
+        {!userId && isEditable && (
           <p className="text-sm text-muted-foreground">
             {en ? 'Please log in to make a wish.' : '请登录后许愿。'}
           </p>
