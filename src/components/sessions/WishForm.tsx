@@ -16,6 +16,7 @@ interface WishFormProps {
   onSubmit: (input: WishInput) => Promise<boolean>;
   onCancel: () => void;
   onUploadFile?: (instanceId: string, file: File) => Promise<string | null>;
+  profiles?: { user_id: string; display_name: string }[];
 }
 
 const ROLE_OPTIONS: { value: WishRole; labelEn: string; labelCn: string; icon: string }[] = [
@@ -25,9 +26,10 @@ const ROLE_OPTIONS: { value: WishRole; labelEn: string; labelCn: string; icon: s
   { value: 'drum', labelEn: 'Drum', labelCn: '鼓', icon: '🥁' },
 ];
 
-const WishForm = ({ instanceId, existingWish, onSubmit, onCancel, onUploadFile }: WishFormProps) => {
+const WishForm = ({ instanceId, existingWish, onSubmit, onCancel, onUploadFile, profiles }: WishFormProps) => {
   const { language } = useLanguage();
   const en = language === 'en';
+  const [selectedUserId, setSelectedUserId] = useState('');
 
   const [songTitle, setSongTitle] = useState(existingWish?.song_title || '');
   const [artist, setArtist] = useState(existingWish?.artist || '');
@@ -58,6 +60,7 @@ const WishForm = ({ instanceId, existingWish, onSubmit, onCancel, onUploadFile }
       score_links: scoreLinks,
       file_urls: fileUrls,
       special_requirements: specialReqs.trim() || undefined,
+      ...(profiles && selectedUserId ? { user_id: selectedUserId } : {}),
     };
     const ok = await onSubmit(input);
     setSubmitting(false);
@@ -91,6 +94,24 @@ const WishForm = ({ instanceId, existingWish, onSubmit, onCancel, onUploadFile }
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Admin user picker */}
+        {profiles && profiles.length > 0 && (
+          <div className="space-y-1.5">
+            <Label>{en ? 'Username (on behalf of)' : '用户名（代表）'} *</Label>
+            <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+              <SelectTrigger>
+                <SelectValue placeholder={en ? 'Select user' : '选择用户'} />
+              </SelectTrigger>
+              <SelectContent>
+                {profiles.map(p => (
+                  <SelectItem key={p.user_id} value={p.user_id}>
+                    {p.display_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
         {/* Song Title & Artist */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="space-y-1.5">
@@ -206,7 +227,7 @@ const WishForm = ({ instanceId, existingWish, onSubmit, onCancel, onUploadFile }
 
         {/* Actions */}
         <div className="flex gap-3 pt-2">
-          <Button onClick={handleSubmit} disabled={!songTitle.trim() || submitting} className="flex-1">
+          <Button onClick={handleSubmit} disabled={!songTitle.trim() || submitting || (!!profiles && !selectedUserId)} className="flex-1">
             {submitting
               ? (en ? 'Saving...' : '保存中...')
               : existingWish

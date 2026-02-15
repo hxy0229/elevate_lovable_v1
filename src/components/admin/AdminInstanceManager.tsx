@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import {
   Plus, Trash2, Eye, EyeOff, Send, ChevronDown, ChevronUp,
-  Clock, Calendar, AlertTriangle, RefreshCw, Image,
+  Clock, Calendar, AlertTriangle, RefreshCw, Image, Edit2, ArrowUp, ArrowDown,
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSessionInstances, type SessionInstance } from '@/hooks/useSessionInstances';
@@ -20,6 +20,7 @@ import { formatTime12h, formatSessionDate, calculateSchedule } from '@/lib/timeU
 import WishCard from '@/components/sessions/WishCard';
 import WishForm from '@/components/sessions/WishForm';
 import InstancePoster from '@/components/sessions/InstancePoster';
+import InstanceEditDialog from './InstanceEditDialog';
 
 interface AdminInstanceManagerProps {
   sessions: any[];
@@ -49,6 +50,7 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
   const [publishConfirm, setPublishConfirm] = useState<SessionInstance | null>(null);
   const [showPoster, setShowPoster] = useState<string | null>(null);
   const [generatingRecurring, setGeneratingRecurring] = useState(false);
+  const [editingInstance, setEditingInstance] = useState<SessionInstance | null>(null);
 
   const [form, setForm] = useState({
     session_id: '',
@@ -241,6 +243,15 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
                     variant="outline"
                     size="sm"
                     className="gap-1.5 text-xs"
+                    onClick={() => setEditingInstance(instance)}
+                  >
+                    <Edit2 className="w-3.5 h-3.5" />
+                    {en ? 'Edit' : '编辑'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 text-xs"
                     onClick={() => handleStatusChange(instance)}
                   >
                     <StatusIcon className="w-3.5 h-3.5" />
@@ -289,18 +300,57 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
                   {instanceWishes.length > 0 ? (
                     <div className="bg-secondary/20 rounded-lg border border-border divide-y divide-border">
                       {instanceWishes.map((wish, i) => (
-                        <WishCard
-                          key={wish.id}
-                          wish={wish}
-                          index={i}
-                          timeSlot={instance.status === 'published' ? calculateSchedule(instance.start_time, instanceWishes.length).times[i] : undefined}
-                          isOwner={false}
-                          isEditable={true}
-                          showUsername={profileMap[wish.user_id] || '—'}
-                          onUpdate={updateWish}
-                          onDelete={deleteWish}
-                          onUploadFile={uploadWishFile}
-                        />
+                        <div key={wish.id} className="flex items-center">
+                          {/* Reorder arrows */}
+                          <div className="flex flex-col gap-0.5 pl-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-5 w-5"
+                              disabled={i === 0}
+                              onClick={async () => {
+                                const ordered = instanceWishes.map((w, idx) => ({
+                                  id: w.id,
+                                  sort_order: idx,
+                                }));
+                                // swap i and i-1
+                                [ordered[i].sort_order, ordered[i - 1].sort_order] = [ordered[i - 1].sort_order, ordered[i].sort_order];
+                                await reorderWishes(ordered);
+                              }}
+                            >
+                              <ArrowUp className="w-3 h-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-5 w-5"
+                              disabled={i === instanceWishes.length - 1}
+                              onClick={async () => {
+                                const ordered = instanceWishes.map((w, idx) => ({
+                                  id: w.id,
+                                  sort_order: idx,
+                                }));
+                                [ordered[i].sort_order, ordered[i + 1].sort_order] = [ordered[i + 1].sort_order, ordered[i].sort_order];
+                                await reorderWishes(ordered);
+                              }}
+                            >
+                              <ArrowDown className="w-3 h-3" />
+                            </Button>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <WishCard
+                              wish={wish}
+                              index={i}
+                              timeSlot={instance.status === 'published' ? calculateSchedule(instance.start_time, instanceWishes.length).times[i] : undefined}
+                              isOwner={false}
+                              isEditable={true}
+                              showUsername={profileMap[wish.user_id] || '—'}
+                              onUpdate={updateWish}
+                              onDelete={deleteWish}
+                              onUploadFile={uploadWishFile}
+                            />
+                          </div>
+                        </div>
                       ))}
                     </div>
                   ) : (
@@ -316,6 +366,7 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
                       onSubmit={createWish}
                       onCancel={() => setShowWishForm(null)}
                       onUploadFile={uploadWishFile}
+                      profiles={profiles}
                     />
                   ) : (
                     <Button
@@ -370,6 +421,14 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Instance Edit Dialog */}
+      {editingInstance && (
+        <InstanceEditDialog
+          instance={editingInstance}
+          onClose={() => setEditingInstance(null)}
+        />
+      )}
     </div>
   );
 };
