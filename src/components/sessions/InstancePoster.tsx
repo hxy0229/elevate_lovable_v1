@@ -137,8 +137,8 @@ const InstancePoster = ({ instance, wishes, profileMap }: InstancePosterProps) =
         {/* Footer */}
         <div className="mt-6 text-center text-xs text-muted-foreground">
           {en
-            ? `Estimated end: ${formatTime12h(schedule.endTime)} · Schedule subject to change`
-            : `预计结束：${formatTime12h(schedule.endTime)} · 时间可能根据实际情况调整`}
+            ? 'Schedule is tentative and subject to change based on actual progress.'
+            : '时间安排仅供参考，可能根据实际进度有所调整。'}
         </div>
       </div>
 
