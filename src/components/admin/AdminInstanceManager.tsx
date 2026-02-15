@@ -485,12 +485,9 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
               {en ? 'Confirm Publish' : '确认发布'}
             </DialogTitle>
             <DialogDescription>
-              {publishConfirm && (() => {
-                const { songCount, endTime } = getPublishWarning(publishConfirm);
-                return en
-                  ? `This session will run until ${endTime} with ${songCount} songs scheduled. Users will no longer be able to edit their wishes. Proceed?`
-                  : `此活动将持续到 ${endTime}，共 ${songCount} 首歌。用户将无法再编辑心愿。确定发布吗？`;
-              })()}
+              {en
+                ? 'Once published, users will no longer be able to edit their wishes. Proceed?'
+                : '发布后，用户将无法再编辑心愿。确定发布吗？'}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
