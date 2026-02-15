@@ -17,6 +17,7 @@ const ROLE_ICONS: Record<string, string> = {
   guitar: '🎸',
   keyboard: '🎹',
   drum: '🥁',
+  bass: '🎸',
 };
 
 const InstancePoster = ({ instance, wishes, profileMap }: InstancePosterProps) => {

@@ -24,7 +24,15 @@ const ROLE_OPTIONS: { value: WishRole; labelEn: string; labelCn: string; icon: s
   { value: 'guitar', labelEn: 'Guitar', labelCn: '吉他', icon: '🎸' },
   { value: 'keyboard', labelEn: 'Keyboard', labelCn: '键盘', icon: '🎹' },
   { value: 'drum', labelEn: 'Drum', labelCn: '鼓', icon: '🥁' },
+  { value: 'bass', labelEn: 'Bass', labelCn: '贝斯', icon: '🎸' },
 ];
+
+const ROLE_TO_INSTRUMENT: Record<string, AccompanyingInstrument> = {
+  guitar: 'guitar',
+  keyboard: 'keyboard',
+  drum: 'drum',
+  bass: 'bass',
+};
 
 const WishForm = ({ instanceId, existingWish, onSubmit, onCancel, onUploadFile, profiles }: WishFormProps) => {
   const { language } = useLanguage();
@@ -34,6 +42,15 @@ const WishForm = ({ instanceId, existingWish, onSubmit, onCancel, onUploadFile, 
   const [songTitle, setSongTitle] = useState(existingWish?.song_title || '');
   const [artist, setArtist] = useState(existingWish?.artist || '');
   const [primaryRole, setPrimaryRole] = useState<WishRole>(existingWish?.primary_role || 'vocal');
+
+  const handleRoleChange = (role: WishRole) => {
+    setPrimaryRole(role);
+    // Auto-select accompanying instrument if role is an instrument
+    const mapped = ROLE_TO_INSTRUMENT[role];
+    if (mapped) {
+      setAccompInstrument(mapped);
+    }
+  };
   const [isSelfAccompanied, setIsSelfAccompanied] = useState(existingWish?.is_self_accompanied || false);
   const [accompInstrument, setAccompInstrument] = useState<AccompanyingInstrument | ''>(existingWish?.accompanying_instrument || '');
   const [songVersion, setSongVersion] = useState(existingWish?.song_version || '');
@@ -134,7 +151,7 @@ const WishForm = ({ instanceId, existingWish, onSubmit, onCancel, onUploadFile, 
                 type="button"
                 variant={primaryRole === r.value ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => setPrimaryRole(r.value)}
+                onClick={() => handleRoleChange(r.value)}
                 className="gap-1.5"
               >
                 {r.icon} {en ? r.labelEn : r.labelCn}
@@ -155,6 +172,8 @@ const WishForm = ({ instanceId, existingWish, onSubmit, onCancel, onUploadFile, 
               <SelectContent>
                 <SelectItem value="guitar">🎸 {en ? 'Guitar' : '吉他'}</SelectItem>
                 <SelectItem value="keyboard">🎹 {en ? 'Keyboard' : '键盘'}</SelectItem>
+                <SelectItem value="drum">🥁 {en ? 'Drum' : '鼓'}</SelectItem>
+                <SelectItem value="bass">🎸 {en ? 'Bass' : '贝斯'}</SelectItem>
               </SelectContent>
             </Select>
           )}

@@ -53,7 +53,7 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
   const [expandedInstances, setExpandedInstances] = useState<Set<string>>(new Set());
   const [showWishForm, setShowWishForm] = useState<string | null>(null);
   const [publishConfirm, setPublishConfirm] = useState<SessionInstance | null>(null);
-  const [showPoster, setShowPoster] = useState<string | null>(null);
+  const [_showPoster, _setShowPoster] = useState<string | null>(null); // kept for compat
   const [editingInstance, setEditingInstance] = useState<SessionInstance | null>(null);
   const [creating, setCreating] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -378,7 +378,10 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
                       <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => handleUnpublish(instance)}>
                         <EyeOff className="w-3.5 h-3.5" /> {en ? 'Unpublish' : '取消发布'}
                       </Button>
-                      <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => setShowPoster(showPoster === instance.id ? null : instance.id)}>
+                      <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => {
+                        const posterEl = document.getElementById(`poster-${instance.id}`);
+                        posterEl?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }}>
                         <Image className="w-3.5 h-3.5" /> {en ? 'Poster' : '海报'}
                       </Button>
                     </>
@@ -468,8 +471,11 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
                 </div>
               )}
 
-              {showPoster === instance.id && isPublished && (
-                <InstancePoster instance={instance} wishes={instanceWishes} profileMap={profileMap} />
+              {/* Always show poster for published sessions */}
+              {isPublished && (
+                <div id={`poster-${instance.id}`}>
+                  <InstancePoster instance={instance} wishes={instanceWishes} profileMap={profileMap} />
+                </div>
               )}
             </CardContent>
           </Card>

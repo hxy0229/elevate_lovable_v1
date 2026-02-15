@@ -23,6 +23,7 @@ const ROLE_DISPLAY: Record<string, { icon: string; labelEn: string; labelCn: str
   guitar: { icon: '🎸', labelEn: 'Guitar', labelCn: '吉他' },
   keyboard: { icon: '🎹', labelEn: 'Keyboard', labelCn: '键盘' },
   drum: { icon: '🥁', labelEn: 'Drum', labelCn: '鼓' },
+  bass: { icon: '🎸', labelEn: 'Bass', labelCn: '贝斯' },
 };
 
 const WishCard = ({ wish, index, timeSlot, isOwner, isEditable, showUsername, onUpdate, onDelete, onUploadFile }: WishCardProps) => {
