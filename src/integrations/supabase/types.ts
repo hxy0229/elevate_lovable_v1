@@ -552,10 +552,10 @@ export type Database = {
       }
     }
     Enums: {
-      accompanying_instrument: "guitar" | "keyboard"
+      accompanying_instrument: "guitar" | "keyboard" | "bass" | "drum"
       app_role: "admin" | "moderator" | "user"
       session_instance_status: "draft" | "open" | "published"
-      wish_role: "vocal" | "guitar" | "keyboard" | "drum"
+      wish_role: "vocal" | "guitar" | "keyboard" | "drum" | "bass"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -683,10 +683,10 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      accompanying_instrument: ["guitar", "keyboard"],
+      accompanying_instrument: ["guitar", "keyboard", "bass", "drum"],
       app_role: ["admin", "moderator", "user"],
       session_instance_status: ["draft", "open", "published"],
-      wish_role: ["vocal", "guitar", "keyboard", "drum"],
+      wish_role: ["vocal", "guitar", "keyboard", "drum", "bass"],
     },
   },
 } as const

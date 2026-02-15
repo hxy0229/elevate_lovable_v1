@@ -3,8 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
-export type WishRole = 'vocal' | 'guitar' | 'keyboard' | 'drum';
-export type AccompanyingInstrument = 'guitar' | 'keyboard';
+export type WishRole = 'vocal' | 'guitar' | 'keyboard' | 'drum' | 'bass';
+export type AccompanyingInstrument = 'guitar' | 'keyboard' | 'drum' | 'bass';
 
 export interface Wish {
   id: string;
