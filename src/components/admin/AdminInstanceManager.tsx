@@ -4,17 +4,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
 import {
-  Plus, Trash2, Eye, EyeOff, Send, ChevronDown, ChevronUp,
-  Clock, Calendar, AlertTriangle, RefreshCw, Image, Edit2, ArrowUp, ArrowDown,
+  Plus, Trash2, Send, EyeOff, ChevronDown, ChevronUp,
+  Clock, AlertTriangle, RefreshCw, Image, Edit2, ArrowUp, ArrowDown, Save, X,
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSessionInstances, type SessionInstance } from '@/hooks/useSessionInstances';
-import { useWishes, type Wish, type WishInput, type WishRole } from '@/hooks/useWishes';
+import { useWishes, type WishInput } from '@/hooks/useWishes';
+import { useAdmin } from '@/hooks/useAdmin';
+import { useSessionConfig } from '@/hooks/useSessionConfig';
 import { useToast } from '@/hooks/use-toast';
 import { formatTime12h, formatSessionDate, calculateSchedule } from '@/lib/timeUtils';
 import WishCard from '@/components/sessions/WishCard';
@@ -27,18 +28,21 @@ interface AdminInstanceManagerProps {
   profiles: { user_id: string; display_name: string }[];
 }
 
-const STATUS_ACTIONS = {
-  draft: { next: 'open', labelEn: 'Open for Wishes', labelCn: '开放点歌', icon: Eye },
-  open: { next: 'published', labelEn: 'Publish', labelCn: '发布', icon: Send },
-  published: { next: 'open', labelEn: 'Unpublish', labelCn: '取消发布', icon: EyeOff },
-};
+const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const recurrenceOptions = [
+  { value: 'weekly', label: 'Every week', labelCn: '每周' },
+  { value: 'biweekly', label: 'Every 2 weeks', labelCn: '每两周' },
+  { value: 'monthly', label: 'Every month', labelCn: '每月' },
+];
 
 const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps) => {
   const { language } = useLanguage();
   const en = language === 'en';
   const { toast } = useToast();
+  const { createSession } = useAdmin();
+  const { sessionTypes, sessionRoles } = useSessionConfig();
   const {
-    instances, loading, createInstance, generateRecurringInstances, updateInstance, deleteInstance, setInstanceStatus,
+    instances, loading, generateRecurringInstances, updateInstance, deleteInstance, setInstanceStatus, refetch,
   } = useSessionInstances();
   const {
     wishes, createWish, updateWish, deleteWish, reorderWishes, uploadWishFile,
@@ -49,48 +53,84 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
   const [showWishForm, setShowWishForm] = useState<string | null>(null);
   const [publishConfirm, setPublishConfirm] = useState<SessionInstance | null>(null);
   const [showPoster, setShowPoster] = useState<string | null>(null);
-  const [generatingRecurring, setGeneratingRecurring] = useState(false);
   const [editingInstance, setEditingInstance] = useState<SessionInstance | null>(null);
+  const [creating, setCreating] = useState(false);
 
+  // Simplified create form — creates parent session + generates instances in one step
   const [form, setForm] = useState({
-    session_id: '',
-    instance_date: '',
+    name: '',
+    name_cn: '',
+    session_type: '',
+    day_of_week: '2',
     start_time: '19:30',
     end_time: '21:30',
+    recurrence_rule: 'weekly',
   });
 
   const profileMap = Object.fromEntries(profiles.map(p => [p.user_id, p.display_name]));
 
+  // Set defaults when config loads
+  const defaultType = sessionTypes[0]?.value || '';
+
   const handleCreate = async () => {
-    if (!form.session_id || !form.instance_date) return;
-    const { error } = await createInstance({
-      session_id: form.session_id,
-      instance_date: form.instance_date,
+    if (!form.name.trim()) return;
+    setCreating(true);
+    
+    const { error } = await createSession({
+      name: form.name,
+      name_cn: form.name_cn,
+      session_type: form.session_type || defaultType,
+      day_of_week: parseInt(form.day_of_week),
       start_time: form.start_time,
       end_time: form.end_time,
+      max_participants: 50,
+      max_songs: 50,
+      allowed_roles: sessionRoles.map(r => r.value),
+      recurrence_rule: form.recurrence_rule,
     });
+
     if (error) {
-      toast({ title: 'Failed', description: error.message, variant: 'destructive' });
-    } else {
-      toast({ title: en ? 'Instance created!' : '实例已创建！' });
-      setShowCreateForm(false);
-      setForm({ session_id: '', instance_date: '', start_time: '19:30', end_time: '21:30' });
-    }
-  };
-
-  const handleStatusChange = async (instance: SessionInstance) => {
-    const action = STATUS_ACTIONS[instance.status];
-    const nextStatus = action.next as 'draft' | 'open' | 'published';
-
-    // If publishing, check for confirmation
-    if (nextStatus === 'published') {
-      setPublishConfirm(instance);
+      toast({ title: en ? 'Failed to create' : '创建失败', description: error.message, variant: 'destructive' });
+      setCreating(false);
       return;
     }
 
-    const { error } = await setInstanceStatus(instance.id, nextStatus);
-    if (error) toast({ title: 'Failed', description: error.message, variant: 'destructive' });
-    else toast({ title: en ? 'Status updated!' : '状态已更新！' });
+    // Wait a moment for the session to be created, then fetch it and generate instances
+    // We need to find the newly created session
+    const { supabase } = await import('@/integrations/supabase/client');
+    const { data: newSessions } = await supabase
+      .from('sessions')
+      .select('*')
+      .eq('name', form.name)
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (newSessions && newSessions.length > 0) {
+      const newSession = newSessions[0] as any;
+      const { created, error: genError } = await generateRecurringInstances({
+        id: newSession.id,
+        day_of_week: newSession.day_of_week,
+        start_time: newSession.start_time,
+        end_time: newSession.end_time,
+        recurrence_rule: newSession.recurrence_rule,
+      });
+      if (genError) {
+        toast({ title: en ? 'Session created but failed to generate instances' : '活动已创建但生成实例失败', variant: 'destructive' });
+      } else {
+        toast({ title: en ? `Session created with ${created} upcoming dates!` : `活动已创建，生成了 ${created} 个日期！` });
+      }
+    } else {
+      toast({ title: en ? 'Session created!' : '活动已创建！' });
+    }
+
+    setShowCreateForm(false);
+    setForm({ name: '', name_cn: '', session_type: '', day_of_week: '2', start_time: '19:30', end_time: '21:30', recurrence_rule: 'weekly' });
+    setCreating(false);
+    await refetch();
+  };
+
+  const handlePublish = (instance: SessionInstance) => {
+    setPublishConfirm(instance);
   };
 
   const confirmPublish = async () => {
@@ -99,6 +139,12 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
     if (error) toast({ title: 'Failed', description: error.message, variant: 'destructive' });
     else toast({ title: en ? 'Published!' : '已发布！' });
     setPublishConfirm(null);
+  };
+
+  const handleUnpublish = async (instance: SessionInstance) => {
+    const { error } = await setInstanceStatus(instance.id, 'draft');
+    if (error) toast({ title: 'Failed', description: error.message, variant: 'destructive' });
+    else toast({ title: en ? 'Unpublished — users can edit wishes again' : '已取消发布 — 用户可以重新编辑心愿' });
   };
 
   const toggleExpand = (id: string) => {
@@ -113,99 +159,137 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
     const instanceWishes = wishes.filter(w => w.instance_id === instance.id);
     const songCount = instanceWishes.length;
     const schedule = calculateSchedule(instance.start_time, songCount);
-    const endTimeFormatted = formatTime12h(schedule.endTime);
-    return { songCount, endTime: endTimeFormatted, rawEndTime: schedule.endTime };
+    return { songCount, endTime: formatTime12h(schedule.endTime) };
   };
+
+  // Generate more instances for an existing session
+  const handleGenerateMore = async (sessionId: string) => {
+    const session = sessions.find(s => s.id === sessionId);
+    if (!session) return;
+    const { created, error } = await generateRecurringInstances({
+      id: session.id,
+      day_of_week: session.day_of_week,
+      start_time: session.start_time,
+      end_time: session.end_time,
+      recurrence_rule: session.recurrence_rule,
+    });
+    if (error) toast({ title: 'Failed', description: error.message, variant: 'destructive' });
+    else toast({ title: en ? `Generated ${created} new dates` : `生成了 ${created} 个新日期` });
+  };
+
+  // Group instances by parent session for the "Generate More" dropdown
+  const recurringSessionIds = [...new Set(instances.map(i => i.session_id))];
+  const recurringSessions = sessions.filter(s => recurringSessionIds.includes(s.id) && s.recurrence_rule);
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex justify-between items-center flex-wrap gap-2">
         <h2 className="font-display text-xl font-semibold text-foreground">
-          {en ? 'Session Instances' : '活动实例'}
+          {en ? 'Weekly Sessions' : '每周活动'}
         </h2>
         <div className="flex gap-2">
-          <Select onValueChange={async (sessionId) => {
-            const session = sessions.find(s => s.id === sessionId);
-            if (!session) return;
-            setGeneratingRecurring(true);
-            const { created, error } = await generateRecurringInstances({
-              id: session.id,
-              day_of_week: session.day_of_week,
-              start_time: session.start_time,
-              end_time: session.end_time,
-              recurrence_rule: session.recurrence_rule,
-            });
-            setGeneratingRecurring(false);
-            if (error) toast({ title: 'Failed', description: error.message, variant: 'destructive' });
-            else toast({ title: en ? `Generated ${created} instances` : `已生成 ${created} 个实例` });
-          }}>
-            <SelectTrigger className="w-auto gap-1.5 rounded-full" disabled={generatingRecurring}>
-              <RefreshCw className={`w-4 h-4 ${generatingRecurring ? 'animate-spin' : ''}`} />
-              <SelectValue placeholder={en ? 'Auto-Generate' : '批量生成'} />
-            </SelectTrigger>
-            <SelectContent>
-              {sessions.filter(s => !s.is_archived && s.recurrence_rule).map(s => (
-                <SelectItem key={s.id} value={s.id}>
-                  {en ? s.name : (s.name_cn || s.name)} ({s.recurrence_rule})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {recurringSessions.length > 0 && (
+            <Select onValueChange={handleGenerateMore}>
+              <SelectTrigger className="w-auto gap-1.5 rounded-full">
+                <RefreshCw className="w-4 h-4" />
+                <SelectValue placeholder={en ? 'Generate More Dates' : '生成更多日期'} />
+              </SelectTrigger>
+              <SelectContent>
+                {recurringSessions.map(s => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {en ? s.name : (s.name_cn || s.name)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           <Button onClick={() => setShowCreateForm(!showCreateForm)} className="rounded-full gap-1.5">
-            <Plus className="w-4 h-4" /> {en ? 'New Instance' : '新建实例'}
+            <Plus className="w-4 h-4" /> {en ? 'New Session' : '新建活动'}
           </Button>
         </div>
       </div>
 
-      {/* Create Form */}
+      {/* Simplified Create Form */}
       {showCreateForm && (
         <Card className="border-primary/30">
           <CardHeader>
-            <CardTitle className="text-lg">{en ? 'Create Session Instance' : '创建活动实例'}</CardTitle>
+            <CardTitle className="text-lg">{en ? 'Create Recurring Session' : '创建重复活动'}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-sm text-muted-foreground">{en ? 'Parent Session' : '父活动'} *</label>
-                <Select value={form.session_id} onValueChange={v => setForm(f => ({ ...f, session_id: v }))}>
-                  <SelectTrigger><SelectValue placeholder={en ? 'Select session' : '选择活动'} /></SelectTrigger>
+                <label className="text-sm text-muted-foreground">{en ? 'Name (EN)' : '名称（英文）'}</label>
+                <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Band Rehearsal" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm text-muted-foreground">{en ? 'Name (CN)' : '名称（中文）'}</label>
+                <Input value={form.name_cn} onChange={e => setForm(f => ({ ...f, name_cn: e.target.value }))} placeholder="乐队排练" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm text-muted-foreground">{en ? 'Day of Week' : '星期几'}</label>
+                <Select value={form.day_of_week} onValueChange={v => setForm(f => ({ ...f, day_of_week: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {sessions.filter(s => !s.is_archived).map(s => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {en ? s.name : (s.name_cn || s.name)}
-                      </SelectItem>
+                    {dayNames.map((d, i) => (
+                      <SelectItem key={i} value={String(i)}>{d}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <label className="text-sm text-muted-foreground">{en ? 'Date' : '日期'} *</label>
-                <Input type="date" value={form.instance_date} onChange={e => setForm(f => ({ ...f, instance_date: e.target.value }))} />
-              </div>
-              <div className="space-y-1.5">
                 <label className="text-sm text-muted-foreground">{en ? 'Start Time' : '开始时间'}</label>
                 <Input type="time" value={form.start_time} onChange={e => setForm(f => ({ ...f, start_time: e.target.value }))} />
               </div>
+              {sessionTypes.length > 0 && (
+                <div className="space-y-1.5">
+                  <label className="text-sm text-muted-foreground">{en ? 'Type' : '类型'}</label>
+                  <Select value={form.session_type || defaultType} onValueChange={v => setForm(f => ({ ...f, session_type: v }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {sessionTypes.map(t => (
+                        <SelectItem key={t.value} value={t.value}>{t.icon} {en ? t.label_en : t.label_cn}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="space-y-1.5">
-                <label className="text-sm text-muted-foreground">{en ? 'End Time' : '结束时间'}</label>
-                <Input type="time" value={form.end_time} onChange={e => setForm(f => ({ ...f, end_time: e.target.value }))} />
+                <label className="text-sm text-muted-foreground flex items-center gap-1.5">
+                  <RefreshCw className="w-3.5 h-3.5" /> {en ? 'Recurrence' : '重复规则'}
+                </label>
+                <Select value={form.recurrence_rule} onValueChange={v => setForm(f => ({ ...f, recurrence_rule: v }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {recurrenceOptions.map(o => (
+                      <SelectItem key={o.value} value={o.value}>{en ? o.label : o.labelCn}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
+            <p className="text-xs text-muted-foreground">
+              {en
+                ? 'This will create a recurring session and automatically generate the next 8 upcoming dates.'
+                : '这将创建一个重复活动并自动生成接下来的 8 个日期。'}
+            </p>
             <div className="flex gap-3">
-              <Button onClick={handleCreate} disabled={!form.session_id || !form.instance_date} className="rounded-full">
-                {en ? 'Create' : '创建'}
+              <Button onClick={handleCreate} disabled={!form.name.trim() || creating} className="rounded-full">
+                <Save className="w-4 h-4 mr-1.5" /> {creating ? (en ? 'Creating...' : '创建中...') : (en ? 'Create & Generate' : '创建并生成')}
               </Button>
               <Button variant="ghost" onClick={() => setShowCreateForm(false)} className="rounded-full">
-                {en ? 'Cancel' : '取消'}
+                <X className="w-4 h-4 mr-1.5" /> {en ? 'Cancel' : '取消'}
               </Button>
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Instance List */}
+      {/* Instance List — the unified table of dated events */}
       {instances.length === 0 && !loading && (
-        <p className="text-center text-muted-foreground py-8">{en ? 'No instances yet' : '暂无实例'}</p>
+        <p className="text-center text-muted-foreground py-8">
+          {en ? 'No sessions yet. Create one above!' : '暂无活动，请在上方创建！'}
+        </p>
       )}
 
       {instances.map(instance => {
@@ -213,8 +297,7 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
         const isExpanded = expandedInstances.has(instance.id);
         const session = instance.session;
         const sessionName = instance.name_override || (en ? session?.name : (session?.name_cn || session?.name)) || '—';
-        const statusAction = STATUS_ACTIONS[instance.status];
-        const StatusIcon = statusAction.icon;
+        const isPublished = instance.status === 'published';
 
         return (
           <Card key={instance.id} className="border-border">
@@ -222,65 +305,61 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
               <div className="flex justify-between items-start gap-2">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <Badge variant={
-                      instance.status === 'published' ? 'default' :
-                      instance.status === 'open' ? 'outline' : 'secondary'
-                    } className={instance.status === 'open' ? 'bg-primary/20 text-primary border-primary/40' : ''}>
-                      {instance.status.toUpperCase()}
+                    <Badge
+                      variant={isPublished ? 'default' : 'outline'}
+                      className={isPublished ? '' : 'bg-primary/20 text-primary border-primary/40'}
+                    >
+                      {isPublished ? (en ? 'Published' : '已发布') : (en ? 'Editable' : '可编辑')}
                     </Badge>
                     <span className="text-sm text-muted-foreground">
                       {formatSessionDate(instance.instance_date, language)}
                     </span>
                     <span className="text-sm text-muted-foreground flex items-center gap-1">
                       <Clock className="w-3.5 h-3.5" />
-                      {formatTime12h(instance.start_time)} – {formatTime12h(instance.end_time)}
+                      {formatTime12h(instance.start_time)}
                     </span>
+                    {instanceWishes.length > 0 && (
+                      <span className="text-xs text-muted-foreground">
+                        🎵 {instanceWishes.length} {en ? 'songs' : '首歌'}
+                      </span>
+                    )}
                   </div>
                   <CardTitle className="text-lg">{sessionName}</CardTitle>
+                  {instance.theme && (
+                    <div className="text-sm text-primary font-medium mt-1">
+                      🎨 {en ? instance.theme : (instance.theme_cn || instance.theme)}
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5 text-xs"
-                    onClick={() => setEditingInstance(instance)}
-                  >
-                    <Edit2 className="w-3.5 h-3.5" />
-                    {en ? 'Edit' : '编辑'}
+                  <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => setEditingInstance(instance)}>
+                    <Edit2 className="w-3.5 h-3.5" /> {en ? 'Edit' : '编辑'}
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5 text-xs"
-                    onClick={() => handleStatusChange(instance)}
-                  >
-                    <StatusIcon className="w-3.5 h-3.5" />
-                    {en ? statusAction.labelEn : statusAction.labelCn}
-                  </Button>
-                  {instance.status === 'published' && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-1.5 text-xs"
-                      onClick={() => setShowPoster(showPoster === instance.id ? null : instance.id)}
-                    >
-                      <Image className="w-3.5 h-3.5" />
-                      {en ? 'Poster' : '海报'}
-                    </Button>
-                  )}
-                  {instance.status === 'draft' && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive"
-                      onClick={async () => {
-                        const { error } = await deleteInstance(instance.id);
-                        if (error) toast({ title: 'Delete failed', variant: 'destructive' });
-                        else toast({ title: en ? 'Deleted' : '已删除' });
-                      }}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                  {isPublished ? (
+                    <>
+                      <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => handleUnpublish(instance)}>
+                        <EyeOff className="w-3.5 h-3.5" /> {en ? 'Unpublish' : '取消发布'}
+                      </Button>
+                      <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => setShowPoster(showPoster === instance.id ? null : instance.id)}>
+                        <Image className="w-3.5 h-3.5" /> {en ? 'Poster' : '海报'}
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => handlePublish(instance)}>
+                        <Send className="w-3.5 h-3.5" /> {en ? 'Publish' : '发布'}
+                      </Button>
+                      <Button
+                        variant="ghost" size="icon" className="h-8 w-8 text-destructive"
+                        onClick={async () => {
+                          const { error } = await deleteInstance(instance.id);
+                          if (error) toast({ title: 'Delete failed', variant: 'destructive' });
+                          else toast({ title: en ? 'Deleted' : '已删除' });
+                        }}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </>
                   )}
                 </div>
               </div>
@@ -301,65 +380,40 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
                     <div className="bg-secondary/20 rounded-lg border border-border divide-y divide-border">
                       {instanceWishes.map((wish, i) => (
                         <div key={wish.id} className="flex items-center">
-                          {/* Reorder arrows */}
                           <div className="flex flex-col gap-0.5 pl-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-5 w-5"
-                              disabled={i === 0}
+                            <Button variant="ghost" size="icon" className="h-5 w-5" disabled={i === 0}
                               onClick={async () => {
-                                const ordered = instanceWishes.map((w, idx) => ({
-                                  id: w.id,
-                                  sort_order: idx,
-                                }));
-                                // swap i and i-1
+                                const ordered = instanceWishes.map((w, idx) => ({ id: w.id, sort_order: idx }));
                                 [ordered[i].sort_order, ordered[i - 1].sort_order] = [ordered[i - 1].sort_order, ordered[i].sort_order];
                                 await reorderWishes(ordered);
-                              }}
-                            >
+                              }}>
                               <ArrowUp className="w-3 h-3" />
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-5 w-5"
-                              disabled={i === instanceWishes.length - 1}
+                            <Button variant="ghost" size="icon" className="h-5 w-5" disabled={i === instanceWishes.length - 1}
                               onClick={async () => {
-                                const ordered = instanceWishes.map((w, idx) => ({
-                                  id: w.id,
-                                  sort_order: idx,
-                                }));
+                                const ordered = instanceWishes.map((w, idx) => ({ id: w.id, sort_order: idx }));
                                 [ordered[i].sort_order, ordered[i + 1].sort_order] = [ordered[i + 1].sort_order, ordered[i].sort_order];
                                 await reorderWishes(ordered);
-                              }}
-                            >
+                              }}>
                               <ArrowDown className="w-3 h-3" />
                             </Button>
                           </div>
                           <div className="flex-1 min-w-0">
                             <WishCard
-                              wish={wish}
-                              index={i}
-                              timeSlot={instance.status === 'published' ? calculateSchedule(instance.start_time, instanceWishes.length).times[i] : undefined}
-                              isOwner={false}
-                              isEditable={true}
+                              wish={wish} index={i}
+                              timeSlot={isPublished ? calculateSchedule(instance.start_time, instanceWishes.length).times[i] : undefined}
+                              isOwner={false} isEditable={true}
                               showUsername={profileMap[wish.user_id] || '—'}
-                              onUpdate={updateWish}
-                              onDelete={deleteWish}
-                              onUploadFile={uploadWishFile}
+                              onUpdate={updateWish} onDelete={deleteWish} onUploadFile={uploadWishFile}
                             />
                           </div>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-muted-foreground py-2">
-                      {en ? 'No wishes yet' : '暂无心愿'}
-                    </p>
+                    <p className="text-sm text-muted-foreground py-2">{en ? 'No wishes yet' : '暂无心愿'}</p>
                   )}
 
-                  {/* Admin add wish */}
                   {showWishForm === instance.id ? (
                     <WishForm
                       instanceId={instance.id}
@@ -369,25 +423,15 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
                       profiles={profiles}
                     />
                   ) : (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-1.5"
-                      onClick={() => setShowWishForm(instance.id)}
-                    >
+                    <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setShowWishForm(instance.id)}>
                       <Plus className="w-3.5 h-3.5" /> {en ? 'Add Wish' : '添加心愿'}
                     </Button>
                   )}
                 </div>
               )}
 
-              {/* Poster */}
-              {showPoster === instance.id && instance.status === 'published' && (
-                <InstancePoster
-                  instance={instance}
-                  wishes={instanceWishes}
-                  profileMap={profileMap}
-                />
+              {showPoster === instance.id && isPublished && (
+                <InstancePoster instance={instance} wishes={instanceWishes} profileMap={profileMap} />
               )}
             </CardContent>
           </Card>
@@ -406,28 +450,20 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
               {publishConfirm && (() => {
                 const { songCount, endTime } = getPublishWarning(publishConfirm);
                 return en
-                  ? `This session will run until ${endTime} with ${songCount} songs scheduled. Are you sure you want to proceed?`
-                  : `此活动将持续到 ${endTime}，共安排 ${songCount} 首歌曲。确定要发布吗？`;
+                  ? `This session will run until ${endTime} with ${songCount} songs scheduled. Users will no longer be able to edit their wishes. Proceed?`
+                  : `此活动将持续到 ${endTime}，共 ${songCount} 首歌。用户将无法再编辑心愿。确定发布吗？`;
               })()}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setPublishConfirm(null)}>
-              {en ? 'Cancel' : '取消'}
-            </Button>
-            <Button onClick={confirmPublish}>
-              {en ? 'Publish' : '发布'}
-            </Button>
+            <Button variant="outline" onClick={() => setPublishConfirm(null)}>{en ? 'Cancel' : '取消'}</Button>
+            <Button onClick={confirmPublish}>{en ? 'Publish' : '发布'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Instance Edit Dialog */}
       {editingInstance && (
-        <InstanceEditDialog
-          instance={editingInstance}
-          onClose={() => setEditingInstance(null)}
-        />
+        <InstanceEditDialog instance={editingInstance} onClose={() => setEditingInstance(null)} />
       )}
     </div>
   );
