@@ -131,10 +131,15 @@ const Contact = () => {
                       ? '感谢您对我们的信任！我们的团队已经迫不及待地想要了解您的音乐之旅了。'
                       : "Thanks for reaching out — we're excited to hear about your musical journey!"}
                   </p>
+                    <p className="text-muted-foreground leading-relaxed">
+                    {language === 'zh'
+                      ? '我们会在24小时内回复您，敬请期待！'
+                      : 'Our team will be in touch within 24 hours.'}
+                  </p>
                   <p className="text-muted-foreground leading-relaxed">
                     {language === 'zh'
-                      ? '我们会在24小时内回复您，敬请期待！🎵'
-                      : "Our team will be in touch within 24 hours. We can't wait to get started! 🎵"}
+                      ? '我们迫不及待想要开始了！🎵'
+                      : "We can't wait to get started! 🎵"}
                   </p>
                 </CardContent>
               </Card>
