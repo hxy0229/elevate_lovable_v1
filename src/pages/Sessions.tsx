@@ -1,15 +1,19 @@
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import { useSessionInstances } from '@/hooks/useSessionInstances';
 import { useWishes } from '@/hooks/useWishes';
 import { useAdmin } from '@/hooks/useAdmin';
 import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { LogIn, Music } from 'lucide-react';
 import SessionInstanceCard from '@/components/sessions/SessionInstanceCard';
 
 const Sessions = () => {
-  const { t } = useLanguage();
-  const { user } = useAuth();
+  const { t, language } = useLanguage();
+  const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
   const { isAdmin } = useAdmin();
   const { instances, loading: instancesLoading } = useSessionInstances();
   const {
@@ -18,6 +22,46 @@ const Sessions = () => {
   } = useWishes();
 
   const loading = instancesLoading || wishesLoading;
+
+  if (authLoading) {
+    return (
+      <Layout>
+        <section className="py-20 lg:py-28">
+          <div className="container mx-auto px-4">
+            <Skeleton className="h-64 max-w-3xl mx-auto rounded-xl" />
+          </div>
+        </section>
+      </Layout>
+    );
+  }
+
+  if (!user) {
+    return (
+      <Layout>
+        <section className="py-20 lg:py-28">
+          <div className="container mx-auto px-4">
+            <div className="text-center max-w-md mx-auto space-y-6">
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                <Music className="w-8 h-8 text-primary" />
+              </div>
+              <h1 className="font-display text-3xl md:text-4xl font-bold text-foreground">
+                {language === 'zh' ? '加入我们的音乐聚会' : 'Join Our Sessions'}
+              </h1>
+              <p className="text-muted-foreground text-base leading-relaxed">
+                {language === 'zh'
+                  ? '登录或注册账号即可查看每周音乐活动、提交心愿单并与其他音乐人互动。'
+                  : 'Sign in or create an account to view weekly sessions, submit your wish list, and connect with fellow musicians.'}
+              </p>
+              <Button size="lg" onClick={() => navigate('/auth')} className="gap-2">
+                <LogIn className="w-4 h-4" />
+                {language === 'zh' ? '登录 / 注册' : 'Sign In / Sign Up'}
+              </Button>
+            </div>
+          </div>
+        </section>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
