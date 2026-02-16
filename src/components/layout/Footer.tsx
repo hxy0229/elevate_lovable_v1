@@ -29,7 +29,7 @@ const Footer = () => {
           {/* Quick Links */}
           <div>
             <h3 className="font-display font-semibold text-lg mb-4">
-              {language === 'en' ? 'Quick Links' : '快速链接'}
+              {language === 'en' ? 'Support' : '支持'}
             </h3>
             <ul className="space-y-2">
               <li>
