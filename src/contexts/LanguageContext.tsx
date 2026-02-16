@@ -28,7 +28,7 @@ const translations: Record<Language, Record<string, string>> = {
     
     // Home page
     'home.welcome': 'Elevate Music Studio',
-    'home.subtitle': 'A creative space dedicated to nurturing musical talent through professional instruction in piano, singing, and vocal performance',
+    'home.subtitle': 'Where singers, musicians, and music lovers come together — from solo vocals to full band jams, choir harmonies to classical ensembles',
     'home.cta.packages': 'View Membership',
     'home.cta.rooms': 'Book Practice Room',
     'home.cta.sessions': 'Join Sessions',
@@ -37,7 +37,7 @@ const translations: Record<Language, Record<string, string>> = {
     'home.feature.rooms': 'Practice Room',
     'home.feature.rooms.desc': 'Fully equipped practice space available for booking',
     'home.feature.sessions': 'Weekly Sessions',
-    'home.feature.sessions.desc': 'Solo vocal practice and band rehearsals every week',
+    'home.feature.sessions.desc': 'Solo vocals, band jams, choir singing, classical ensembles & more — pick your song, grab the mic or your instrument, and shine',
     'home.feature.lessons': 'Lessons & Programs',
     'home.feature.lessons.desc': 'Vocal, piano, orchestral, guitar, ukulele, drums and exam preparation',
     
@@ -185,7 +185,7 @@ const translations: Record<Language, Record<string, string>> = {
     
     // Home page
     'home.welcome': '星月之音文化俱乐部',
-    'home.subtitle': '致力于通过钢琴、声乐等专业教学培养音乐人才的创意空间',
+    'home.subtitle': '歌手、乐手与音乐爱好者齐聚一堂 — 从独唱到乐队合奏，从合唱团到古典合奏，尽情释放你的音乐热情',
     'home.cta.packages': '查看会员配套',
     'home.cta.rooms': '预约练习室',
     'home.cta.sessions': '参加活动',
@@ -194,7 +194,7 @@ const translations: Record<Language, Record<string, string>> = {
     'home.feature.rooms': '练习室',
     'home.feature.rooms.desc': '设备齐全的练习空间可供预约',
     'home.feature.sessions': '每周活动',
-    'home.feature.sessions.desc': '每周独唱练习和乐队排练',
+    'home.feature.sessions.desc': '独唱、乐队合奏、合唱团、古典合奏等 — 选首歌，拿起麦克风或乐器，尽情展现自己',
     'home.feature.lessons': '课程与项目',
     'home.feature.lessons.desc': '声乐、钢琴、管弦乐、民乐、吉他、尤克里里、架子鼓及考级培训',
     
