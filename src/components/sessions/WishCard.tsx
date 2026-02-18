@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Edit2, Trash2, Link as LinkIcon, FileText, AlertCircle } from 'lucide-react';
+import { Edit2, Trash2, Link as LinkIcon, FileText, AlertCircle, Clock, LogIn } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import type { Wish, WishInput } from '@/hooks/useWishes';
 import WishForm from './WishForm';
@@ -111,13 +111,47 @@ const WishCard = ({ wish, index, timeSlot, isOwner, isEditable, showUsername, on
           ))}
         </div>
 
-        {/* Special requirements */}
-        {wish.special_requirements && (
-          <div className="flex items-start gap-1.5 text-xs text-accent">
-            <AlertCircle className="w-3 h-3 mt-0.5 shrink-0" />
-            {wish.special_requirements}
-          </div>
-        )}
+        {/* Special requirements / time constraints */}
+        {wish.special_requirements && (() => {
+          let leaveBy = '', arriveAfter = '', notes = '';
+          try {
+            const p = JSON.parse(wish.special_requirements);
+            leaveBy = p.leaveBy || '';
+            arriveAfter = p.arriveAfter || '';
+            notes = p.notes || '';
+          } catch {
+            notes = wish.special_requirements;
+          }
+          const fmt = (t: string) => {
+            if (!t || t === 'none') return '';
+            const [h, m] = t.split(':').map(Number);
+            const period = h < 12 ? 'AM' : 'PM';
+            const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+            return `${h12}:${m.toString().padStart(2, '0')} ${period}`;
+          };
+          return (
+            <div className="flex flex-col gap-0.5">
+              {leaveBy && leaveBy !== 'none' && (
+                <div className="flex items-center gap-1.5 text-xs text-destructive font-medium">
+                  <Clock className="w-3 h-3 shrink-0" />
+                  {`Leave by ${fmt(leaveBy)}`}
+                </div>
+              )}
+              {arriveAfter && arriveAfter !== 'none' && (
+                <div className="flex items-center gap-1.5 text-xs text-primary font-medium">
+                  <LogIn className="w-3 h-3 shrink-0" />
+                  {`Arriving after ${fmt(arriveAfter)}`}
+                </div>
+              )}
+              {notes && (
+                <div className="flex items-start gap-1.5 text-xs text-accent">
+                  <AlertCircle className="w-3 h-3 mt-0.5 shrink-0" />
+                  {notes}
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </div>
 
       {/* Actions */}
