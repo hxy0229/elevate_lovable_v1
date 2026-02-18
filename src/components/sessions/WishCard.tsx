@@ -113,10 +113,11 @@ const WishCard = ({ wish, index, timeSlot, isOwner, isEditable, showUsername, on
 
         {/* Special requirements / structured constraints */}
         {wish.special_requirements && (() => {
-          let arriveAfter = '', arrangementRequest = '', notes = '';
+          let arriveAfter = '', leaveBy = '', arrangementRequest = '', notes = '';
           try {
             const p = JSON.parse(wish.special_requirements);
             arriveAfter = p.arriveAfter || '';
+            leaveBy = p.leaveBy || '';
             arrangementRequest = p.arrangementRequest || '';
             notes = p.notes || '';
           } catch {
@@ -135,6 +136,12 @@ const WishCard = ({ wish, index, timeSlot, isOwner, isEditable, showUsername, on
                 <div className="flex items-center gap-1.5 text-xs text-primary font-medium">
                   <LogIn className="w-3 h-3 shrink-0" />
                   {en ? `Arrives after ${fmt(arriveAfter)}` : `${fmt(arriveAfter)} 后到达`}
+                </div>
+              )}
+              {leaveBy && leaveBy !== 'none' && (
+                <div className="flex items-center gap-1.5 text-xs text-destructive font-medium">
+                  <Clock className="w-3 h-3 shrink-0" />
+                  {en ? `Leaves before ${fmt(leaveBy)}` : `${fmt(leaveBy)} 前离开`}
                 </div>
               )}
               {arrangementRequest && (

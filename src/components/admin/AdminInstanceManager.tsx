@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/dialog';
 import {
   Plus, Trash2, Send, EyeOff, ChevronDown, ChevronUp,
-  Clock, AlertTriangle, RefreshCw, Image, Edit2, ArrowUp, ArrowDown, Save, X, CheckSquare, Square,
+  Clock, AlertTriangle, RefreshCw, Image, Edit2, ArrowUp, ArrowDown, Save, X, CheckSquare, Square, Wand2,
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -19,6 +19,7 @@ import { useAdmin } from '@/hooks/useAdmin';
 import { useSessionConfig } from '@/hooks/useSessionConfig';
 import { useToast } from '@/hooks/use-toast';
 import { formatTime12h, formatSessionDate, calculateSchedule } from '@/lib/timeUtils';
+import { autoArrangeWishes } from '@/lib/scheduleUtils';
 import WishCard from '@/components/sessions/WishCard';
 import WishForm from '@/components/sessions/WishForm';
 import InstancePoster from '@/components/sessions/InstancePoster';
@@ -58,6 +59,7 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
   const [creating, setCreating] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [arrangingInstance, setArrangingInstance] = useState<string | null>(null);
 
   // Simplified create form — creates parent session + generates instances in one step
   const [form, setForm] = useState({
@@ -97,8 +99,6 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
       return;
     }
 
-    // Wait a moment for the session to be created, then fetch it and generate instances
-    // We need to find the newly created session
     const { supabase } = await import('@/integrations/supabase/client');
     const { data: newSessions } = await supabase
       .from('sessions')
@@ -210,6 +210,35 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
     setDeleteConfirm(false);
   };
 
+  const handleAutoArrange = async (instance: SessionInstance) => {
+    const instanceWishes = wishes.filter(w => w.instance_id === instance.id);
+    if (instanceWishes.length === 0) return;
+
+    setArrangingInstance(instance.id);
+
+    const startTime = instance.start_time;
+    const endTime = instance.end_time;
+
+    const { orderedIds, infos } = autoArrangeWishes(instanceWishes, startTime, endTime, 15);
+    const conflictCount = infos.filter(i => i.hasConflict).length;
+
+    await reorderWishes(orderedIds);
+
+    setArrangingInstance(null);
+
+    if (conflictCount > 0) {
+      toast({
+        title: en ? `Auto-arranged with ${conflictCount} conflict(s)` : `自动排序完成，${conflictCount} 个冲突`,
+        description: en
+          ? 'Conflicts are shown in red. Please review manually.'
+          : '冲突已用红色标出，请手动检查。',
+        variant: 'destructive',
+      });
+    } else {
+      toast({ title: en ? 'Auto-arranged successfully!' : '自动排序完成！' });
+    }
+  };
+
   // Group instances by parent session for the "Generate More" dropdown
   const recurringSessionIds = [...new Set(instances.map(i => i.session_id))];
   const recurringSessions = sessions.filter(s => recurringSessionIds.includes(s.id) && s.recurrence_rule);
@@ -318,7 +347,7 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
         </Card>
       )}
 
-      {/* Instance List — the unified table of dated events */}
+      {/* Instance List */}
       {instances.length === 0 && !loading && (
         <p className="text-center text-muted-foreground py-8">
           {en ? 'No sessions yet. Create one above!' : '暂无活动，请在上方创建！'}
@@ -331,6 +360,15 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
         const session = instance.session;
         const sessionName = instance.name_override || (en ? session?.name : (session?.name_cn || session?.name)) || '—';
         const isPublished = instance.status === 'published';
+
+        // Compute scheduling info for conflict detection (editable sessions only)
+        const scheduleInfoMap = (() => {
+          if (isPublished || instanceWishes.length === 0) return {};
+          const startTime = instance.start_time;
+          const endTime = instance.end_time;
+          const { infos } = autoArrangeWishes(instanceWishes, startTime, endTime, 15);
+          return Object.fromEntries(infos.map(i => [i.wish.id, i]));
+        })();
 
         return (
           <Card key={instance.id} className={`border-border ${selectedIds.has(instance.id) ? 'ring-2 ring-primary/40' : ''}`}>
@@ -418,39 +456,72 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
               {isExpanded && (
                 <div className="space-y-3">
                   {instanceWishes.length > 0 ? (
-                    <div className="bg-secondary/20 rounded-lg border border-border divide-y divide-border">
-                      {instanceWishes.map((wish, i) => (
-                        <div key={wish.id} className="flex items-center">
-                          <div className="flex flex-col gap-0.5 pl-2">
-                            <Button variant="ghost" size="icon" className="h-5 w-5" disabled={i === 0}
-                              onClick={async () => {
-                                const ordered = instanceWishes.map((w, idx) => ({ id: w.id, sort_order: idx }));
-                                [ordered[i].sort_order, ordered[i - 1].sort_order] = [ordered[i - 1].sort_order, ordered[i].sort_order];
-                                await reorderWishes(ordered);
-                              }}>
-                              <ArrowUp className="w-3 h-3" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-5 w-5" disabled={i === instanceWishes.length - 1}
-                              onClick={async () => {
-                                const ordered = instanceWishes.map((w, idx) => ({ id: w.id, sort_order: idx }));
-                                [ordered[i].sort_order, ordered[i + 1].sort_order] = [ordered[i + 1].sort_order, ordered[i].sort_order];
-                                await reorderWishes(ordered);
-                              }}>
-                              <ArrowDown className="w-3 h-3" />
-                            </Button>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <WishCard
-                              wish={wish} index={i}
-                              timeSlot={isPublished ? calculateSchedule(instance.start_time, instanceWishes.length).times[i] : undefined}
-                              isOwner={false} isEditable={true}
-                              showUsername={profileMap[wish.user_id] || '—'}
-                              onUpdate={updateWish} onDelete={deleteWish} onUploadFile={uploadWishFile}
-                            />
-                          </div>
+                    <>
+                      {/* Auto-arrange button — only for editable sessions */}
+                      {!isPublished && (
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1.5 text-xs"
+                            disabled={arrangingInstance === instance.id}
+                            onClick={() => handleAutoArrange(instance)}
+                          >
+                            <Wand2 className="w-3.5 h-3.5" />
+                            {arrangingInstance === instance.id
+                              ? (en ? 'Arranging…' : '排序中…')
+                              : (en ? 'Auto Arrange Based on Availability' : '按可用时间自动排序')}
+                          </Button>
+                          <span className="text-xs text-muted-foreground">
+                            {en ? 'Suggestion only — you can reorder manually.' : '仅供参考，可手动调整。'}
+                          </span>
                         </div>
-                      ))}
-                    </div>
+                      )}
+
+                      <div className="bg-secondary/20 rounded-lg border border-border divide-y divide-border">
+                        {instanceWishes.map((wish, i) => {
+                          const info = scheduleInfoMap[wish.id];
+                          const hasConflict = info?.hasConflict;
+                          return (
+                            <div key={wish.id} className={`flex items-center ${hasConflict ? 'bg-destructive/5' : ''}`}>
+                              <div className="flex flex-col gap-0.5 pl-2">
+                                <Button variant="ghost" size="icon" className="h-5 w-5" disabled={i === 0}
+                                  onClick={async () => {
+                                    const ordered = instanceWishes.map((w, idx) => ({ id: w.id, sort_order: idx }));
+                                    [ordered[i].sort_order, ordered[i - 1].sort_order] = [ordered[i - 1].sort_order, ordered[i].sort_order];
+                                    await reorderWishes(ordered);
+                                  }}>
+                                  <ArrowUp className="w-3 h-3" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-5 w-5" disabled={i === instanceWishes.length - 1}
+                                  onClick={async () => {
+                                    const ordered = instanceWishes.map((w, idx) => ({ id: w.id, sort_order: idx }));
+                                    [ordered[i].sort_order, ordered[i + 1].sort_order] = [ordered[i + 1].sort_order, ordered[i].sort_order];
+                                    await reorderWishes(ordered);
+                                  }}>
+                                  <ArrowDown className="w-3 h-3" />
+                                </Button>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <WishCard
+                                  wish={wish} index={i}
+                                  timeSlot={isPublished ? calculateSchedule(instance.start_time, instanceWishes.length).times[i] : undefined}
+                                  isOwner={false} isEditable={true}
+                                  showUsername={profileMap[wish.user_id] || '—'}
+                                  onUpdate={updateWish} onDelete={deleteWish} onUploadFile={uploadWishFile}
+                                />
+                                {hasConflict && (
+                                  <div className="flex items-center gap-1 px-4 pb-1.5 text-xs text-destructive font-medium">
+                                    <AlertTriangle className="w-3 h-3 shrink-0" />
+                                    {en ? `Scheduling conflict: ${info.conflictReason}` : `排程冲突：${info.conflictReason}`}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
                   ) : (
                     <p className="text-sm text-muted-foreground py-2">{en ? 'No wishes yet' : '暂无心愿'}</p>
                   )}
