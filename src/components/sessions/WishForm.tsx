@@ -52,15 +52,15 @@ const ROLE_TO_INSTRUMENT: Record<string, AccompanyingInstrument> = {
 
 // Structured constraints stored as JSON in special_requirements
 interface Constraints {
-  leaveBy: string;
   arriveAfter: string;
+  arrangementRequest: string;
   notes: string;
 }
 
 const parseConstraints = (raw: string | null | undefined): Constraints => {
-  if (!raw) return { leaveBy: '', arriveAfter: '', notes: '' };
-  try { return { leaveBy: '', arriveAfter: '', notes: '', ...JSON.parse(raw) }; }
-  catch { return { leaveBy: '', arriveAfter: '', notes: raw }; }
+  if (!raw) return { arriveAfter: '', arrangementRequest: '', notes: '' };
+  try { return { arriveAfter: '', arrangementRequest: '', notes: '', ...JSON.parse(raw) }; }
+  catch { return { arriveAfter: '', arrangementRequest: '', notes: raw }; }
 };
 
 const WishForm = ({ instanceId, existingWish, onSubmit, onCancel, onUploadFile, profiles }: WishFormProps) => {
@@ -81,10 +81,10 @@ const WishForm = ({ instanceId, existingWish, onSubmit, onCancel, onUploadFile, 
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // Structured time constraints
+  // Structured constraints
   const parsed = parseConstraints(existingWish?.special_requirements);
-  const [leaveBy, setLeaveBy] = useState(parsed.leaveBy);
   const [arriveAfter, setArriveAfter] = useState(parsed.arriveAfter);
+  const [arrangementRequest, setArrangementRequest] = useState(parsed.arrangementRequest);
   const [specialNotes, setSpecialNotes] = useState(parsed.notes);
 
   const handleRoleChange = (role: WishRole) => {
@@ -98,8 +98,8 @@ const WishForm = ({ instanceId, existingWish, onSubmit, onCancel, onUploadFile, 
     setSubmitting(true);
 
     // Encode constraints as JSON
-    const constraintsObj: Constraints = { leaveBy, arriveAfter, notes: specialNotes.trim() };
-    const hasConstraints = leaveBy || arriveAfter || specialNotes.trim();
+    const constraintsObj: Constraints = { arriveAfter, arrangementRequest: arrangementRequest.trim(), notes: specialNotes.trim() };
+    const hasConstraints = arriveAfter || arrangementRequest.trim() || specialNotes.trim();
     const special_requirements = hasConstraints ? JSON.stringify(constraintsObj) : undefined;
 
     const input: WishInput = {
@@ -271,72 +271,69 @@ const WishForm = ({ instanceId, existingWish, onSubmit, onCancel, onUploadFile, 
           </div>
         </div>
 
-        {/* ── Scheduling Constraints ── */}
+        {/* ── Scheduling & Preferences ── */}
         <div className="space-y-3 p-3 rounded-lg bg-secondary/30 border border-border">
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-primary" />
             <Label className="font-semibold">
-              {en ? 'Time Constraints (helps us schedule your slot)' : '时间限制（帮助我们安排你的出场顺序）'}
+              {en ? 'Scheduling & Preferences' : '时间与偏好设置'}
             </Label>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {/* Need to leave by */}
-            <div className="space-y-1.5">
-              <Label className="text-sm text-muted-foreground">
-                {en ? 'Need to leave by' : '需在几点前离开'}
-              </Label>
-              <Select value={leaveBy} onValueChange={setLeaveBy}>
-                <SelectTrigger>
-                  <SelectValue placeholder={en ? 'No constraint' : '无限制'} />
-                </SelectTrigger>
-                <SelectContent className="max-h-56">
-                  {TIME_OPTIONS.map(o => (
-                    <SelectItem key={o.value || 'none'} value={o.value || 'none'}>
-                      {o.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                {en ? 'We\'ll try to schedule you earlier.' : '我们会尽量安排你提前出场。'}
-              </p>
-            </div>
-
-            {/* Arriving after */}
-            <div className="space-y-1.5">
-              <Label className="text-sm text-muted-foreground">
-                {en ? 'Arriving after' : '几点后才能到达'}
-              </Label>
-              <Select value={arriveAfter} onValueChange={setArriveAfter}>
-                <SelectTrigger>
-                  <SelectValue placeholder={en ? 'No constraint' : '无限制'} />
-                </SelectTrigger>
-                <SelectContent className="max-h-56">
-                  {TIME_OPTIONS.map(o => (
-                    <SelectItem key={o.value || 'none'} value={o.value || 'none'}>
-                      {o.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                {en ? 'We\'ll try to schedule you later.' : '我们会尽量安排你推后出场。'}
-              </p>
-            </div>
+          {/* Arrival Time */}
+          <div className="space-y-1.5">
+            <Label className="text-sm">
+              {en ? 'I will arrive after' : '我将在几点后到达'}
+              <span className="text-muted-foreground ml-1 font-normal">{en ? '(Optional)' : '（可选）'}</span>
+            </Label>
+            <Select value={arriveAfter} onValueChange={setArriveAfter}>
+              <SelectTrigger>
+                <SelectValue placeholder={en ? 'No constraint' : '无限制'} />
+              </SelectTrigger>
+              <SelectContent className="max-h-56">
+                {TIME_OPTIONS.map(o => (
+                  <SelectItem key={o.value || 'none'} value={o.value || 'none'}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              {en ? 'Helps us schedule your slot later in the session.' : '帮助我们将你安排在较后的出场顺序。'}
+            </p>
           </div>
 
-          {/* Other notes */}
+          {/* Arrangement / Style Request */}
           <div className="space-y-1.5">
-            <Label className="text-sm text-muted-foreground">
-              {en ? 'Other notes for admin' : '其他备注（给管理员）'}
+            <Label className="text-sm">
+              {en ? 'Arrangement / Style Request' : '编曲 / 风格要求'}
+              <span className="text-muted-foreground ml-1 font-normal">{en ? '(Optional)' : '（可选）'}</span>
+            </Label>
+            <Textarea
+              value={arrangementRequest}
+              onChange={e => setArrangementRequest(e.target.value)}
+              placeholder={en
+                ? 'e.g., Rock version, lower key by 2 semitones, slower tempo...'
+                : '例：摇滚版本、降2个半音、节奏慢一点...'}
+              rows={2}
+            />
+            <p className="text-xs text-muted-foreground">
+              {en ? 'Musical preferences only. Does not affect scheduling.' : '仅限音乐偏好，不影响排程逻辑。'}
+            </p>
+          </div>
+
+          {/* Additional Notes */}
+          <div className="space-y-1.5">
+            <Label className="text-sm">
+              {en ? 'Additional Notes' : '其他备注'}
+              <span className="text-muted-foreground ml-1 font-normal">{en ? '(Optional)' : '（可选）'}</span>
             </Label>
             <Textarea
               value={specialNotes}
               onChange={e => setSpecialNotes(e.target.value)}
               placeholder={en
-                ? 'e.g., Need specific sound effects, backing track included in file...'
-                : '例：需要特定音效、伴奏已在文件中...'}
+                ? 'Anything else the admin should know...'
+                : '其他管理员需要知道的信息...'}
               rows={2}
             />
           </div>
