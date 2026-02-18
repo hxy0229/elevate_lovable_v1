@@ -10,8 +10,16 @@ import { X, Upload, Plus, Link as LinkIcon, Clock } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import type { WishRole, AccompanyingInstrument, WishInput, Wish } from '@/hooks/useWishes';
 
-// Reusable native time input with a styled clear button
-const TimeInput = ({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) => (
+// Native time input — replaces legacy TIME_OPTIONS dropdown
+const TimeInput = ({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) => (
   <div className="relative flex items-center">
     <input
       type="time"
@@ -25,7 +33,7 @@ const TimeInput = ({ value, onChange, placeholder }: { value: string; onChange: 
         type="button"
         onClick={() => onChange('')}
         className="absolute right-2 text-muted-foreground hover:text-foreground transition-colors"
-        aria-label="Clear"
+        aria-label="Clear time"
       >
         <X className="w-3.5 h-3.5" />
       </button>
