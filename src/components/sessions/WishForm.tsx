@@ -10,21 +10,29 @@ import { X, Upload, Plus, Link as LinkIcon, Clock } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import type { WishRole, AccompanyingInstrument, WishInput, Wish } from '@/hooks/useWishes';
 
-// Time options: 15-min increments from 6am to midnight
-const TIME_OPTIONS = (() => {
-  const opts: { value: string; label: string }[] = [{ value: '', label: '—' }];
-  for (let h = 6; h <= 24; h++) {
-    for (const m of [0, 15, 30, 45]) {
-      if (h === 24 && m > 0) break;
-      const hh = h % 24;
-      const period = hh < 12 ? 'AM' : 'PM';
-      const h12 = hh === 0 ? 12 : hh > 12 ? hh - 12 : hh;
-      const label = `${h12}:${m.toString().padStart(2, '0')} ${period}`;
-      opts.push({ value: `${hh.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`, label });
-    }
-  }
-  return opts;
-})();
+// Reusable native time input with a styled clear button
+const TimeInput = ({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) => (
+  <div className="relative flex items-center">
+    <input
+      type="time"
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      placeholder={placeholder}
+      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 pr-8"
+    />
+    {value && (
+      <button
+        type="button"
+        onClick={() => onChange('')}
+        className="absolute right-2 text-muted-foreground hover:text-foreground transition-colors"
+        aria-label="Clear"
+      >
+        <X className="w-3.5 h-3.5" />
+      </button>
+    )}
+  </div>
+);
+
 
 interface WishFormProps {
   instanceId: string;
@@ -318,35 +326,13 @@ const WishForm = ({ instanceId, existingWish, onSubmit, onCancel, onUploadFile, 
             {/* Arrival Time */}
             <div className="space-y-1.5">
               <Label className="text-sm">{en ? 'I will arrive after' : '我将在此时间后到达'}</Label>
-              <Select value={arriveAfter} onValueChange={setArriveAfter}>
-                <SelectTrigger>
-                  <SelectValue placeholder={en ? 'No constraint' : '无限制'} />
-                </SelectTrigger>
-                <SelectContent className="max-h-56">
-                  {TIME_OPTIONS.map(o => (
-                    <SelectItem key={o.value || 'none'} value={o.value || 'none'}>
-                      {o.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <TimeInput value={arriveAfter} onChange={setArriveAfter} placeholder={en ? 'No constraint' : '无限制'} />
             </div>
 
             {/* Leave Before */}
             <div className="space-y-1.5">
               <Label className="text-sm">{en ? 'I will leave before' : '我将在此时间前离开'}</Label>
-              <Select value={leaveBy} onValueChange={setLeaveBy}>
-                <SelectTrigger>
-                  <SelectValue placeholder={en ? 'No constraint' : '无限制'} />
-                </SelectTrigger>
-                <SelectContent className="max-h-56">
-                  {TIME_OPTIONS.map(o => (
-                    <SelectItem key={o.value || 'none'} value={o.value || 'none'}>
-                      {o.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <TimeInput value={leaveBy} onChange={setLeaveBy} placeholder={en ? 'No constraint' : '无限制'} />
             </div>
           </div>
 
@@ -364,12 +350,14 @@ const WishForm = ({ instanceId, existingWish, onSubmit, onCancel, onUploadFile, 
               value={arrangementRequest}
               onChange={e => setArrangementRequest(e.target.value)}
               placeholder={en
-                ? 'e.g., Rock version, lower key by 2 semitones, slower tempo…'
-                : '例：摇滚版本、降2个半音、节奏慢一点…'}
+                ? 'e.g., Rock version, acoustic ballad, slower tempo, skip verse 2, guitar solo intro…'
+                : '例：摇滚版本、民谣风格、节奏慢一点、跳过第二段、吉他独奏开场…'}
               rows={2}
             />
             <p className="text-xs text-muted-foreground">
-              {en ? 'Musical preferences only. Does not affect scheduling.' : '仅限音乐偏好，不影响排程逻辑。'}
+              {en
+                ? 'Optional: Tell us if you want a different style, tempo, structure, or arrangement variation.'
+                : '可选：如需不同风格、节奏、结构或编曲变化，请告知我们。'}
             </p>
           </div>
 
