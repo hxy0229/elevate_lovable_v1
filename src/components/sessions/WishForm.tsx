@@ -10,7 +10,7 @@ import { X, Upload, Plus, Link as LinkIcon, Clock } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import type { WishRole, AccompanyingInstrument, WishInput, Wish } from '@/hooks/useWishes';
 
-// 15-min increment time options 6am–midnight
+// Time options: 15-min increments from 6am to midnight
 const TIME_OPTIONS = (() => {
   const opts: { value: string; label: string }[] = [{ value: '', label: '—' }];
   for (let h = 6; h <= 24; h++) {
