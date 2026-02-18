@@ -111,13 +111,13 @@ const WishCard = ({ wish, index, timeSlot, isOwner, isEditable, showUsername, on
           ))}
         </div>
 
-        {/* Special requirements / time constraints */}
+        {/* Special requirements / structured constraints */}
         {wish.special_requirements && (() => {
-          let leaveBy = '', arriveAfter = '', notes = '';
+          let arriveAfter = '', arrangementRequest = '', notes = '';
           try {
             const p = JSON.parse(wish.special_requirements);
-            leaveBy = p.leaveBy || '';
             arriveAfter = p.arriveAfter || '';
+            arrangementRequest = p.arrangementRequest || '';
             notes = p.notes || '';
           } catch {
             notes = wish.special_requirements;
@@ -131,20 +131,20 @@ const WishCard = ({ wish, index, timeSlot, isOwner, isEditable, showUsername, on
           };
           return (
             <div className="flex flex-col gap-0.5">
-              {leaveBy && leaveBy !== 'none' && (
-                <div className="flex items-center gap-1.5 text-xs text-destructive font-medium">
-                  <Clock className="w-3 h-3 shrink-0" />
-                  {`Leave by ${fmt(leaveBy)}`}
-                </div>
-              )}
               {arriveAfter && arriveAfter !== 'none' && (
                 <div className="flex items-center gap-1.5 text-xs text-primary font-medium">
                   <LogIn className="w-3 h-3 shrink-0" />
-                  {`Arriving after ${fmt(arriveAfter)}`}
+                  {en ? `Arrives after ${fmt(arriveAfter)}` : `${fmt(arriveAfter)} 后到达`}
+                </div>
+              )}
+              {arrangementRequest && (
+                <div className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                  <AlertCircle className="w-3 h-3 mt-0.5 shrink-0" />
+                  {en ? 'Style: ' : '风格：'}{arrangementRequest}
                 </div>
               )}
               {notes && (
-                <div className="flex items-start gap-1.5 text-xs text-accent">
+                <div className="flex items-start gap-1.5 text-xs text-muted-foreground">
                   <AlertCircle className="w-3 h-3 mt-0.5 shrink-0" />
                   {notes}
                 </div>
