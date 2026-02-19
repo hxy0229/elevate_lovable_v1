@@ -428,12 +428,10 @@ const WishForm = ({ instanceId, existingWish, onSubmit, onCancel, onUploadFile, 
             <div className="space-y-1.5">
               <Label className="text-sm">{en ? "I will arrive after" : "我将在此时间后到达"}</Label>
               <TimeInput value={arriveAfter} onChange={setArriveAfter} />
-              <p className="text-xs text-muted-foreground">{en ? "Default: 8:00 PM" : "默认：晚上8点"}</p>
             </div>
             <div className="space-y-1.5">
               <Label className="text-sm">{en ? "I will leave before" : "我将在此时间前离开"}</Label>
               <TimeInput value={leaveBy} onChange={setLeaveBy} />
-              <p className="text-xs text-muted-foreground">{en ? "Default: 10:00 PM" : "默认：晚上10点"}</p>
             </div>
           </div>
 

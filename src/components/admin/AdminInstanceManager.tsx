@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/dialog';
 import {
   Plus, Trash2, Send, EyeOff, ChevronDown, ChevronUp,
-  Clock, AlertTriangle, RefreshCw, Image, Edit2, ArrowUp, ArrowDown, Save, X, CheckSquare, Square, Wand2,
+  Clock, AlertTriangle, RefreshCw, Image, Edit2, ArrowUp, ArrowDown, Save, X, CheckSquare, Square,
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -59,7 +59,8 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
   const [creating, setCreating] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleteConfirm, setDeleteConfirm] = useState(false);
-  const [arrangingInstance, setArrangingInstance] = useState<string | null>(null);
+  // Track which instances have already been auto-arranged this session
+  const autoArrangedRef = useRef<Set<string>>(new Set());
 
   // Simplified create form — creates parent session + generates instances in one step
   const [form, setForm] = useState({
@@ -72,6 +73,20 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
   });
 
   const profileMap = Object.fromEntries(profiles.map(p => [p.user_id, p.display_name]));
+
+  // Auto-arrange all editable instances whenever wishes change (silently, once per instance)
+  useEffect(() => {
+    if (loading) return;
+    instances.forEach(instance => {
+      if (instance.status === 'published') return;
+      const instanceWishes = wishes.filter(w => w.instance_id === instance.id);
+      if (instanceWishes.length === 0) return;
+      if (autoArrangedRef.current.has(instance.id)) return;
+      autoArrangedRef.current.add(instance.id);
+      const { orderedIds } = autoArrangeWishes(instanceWishes, instance.start_time, instance.end_time, 15);
+      reorderWishes(orderedIds);
+    });
+  }, [wishes, instances, loading]);
 
   // Set defaults when config loads
   const defaultType = sessionTypes[0]?.value || '';
@@ -210,34 +225,8 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
     setDeleteConfirm(false);
   };
 
-  const handleAutoArrange = async (instance: SessionInstance) => {
-    const instanceWishes = wishes.filter(w => w.instance_id === instance.id);
-    if (instanceWishes.length === 0) return;
 
-    setArrangingInstance(instance.id);
 
-    const startTime = instance.start_time;
-    const endTime = instance.end_time;
-
-    const { orderedIds, infos } = autoArrangeWishes(instanceWishes, startTime, endTime, 15);
-    const conflictCount = infos.filter(i => i.hasConflict).length;
-
-    await reorderWishes(orderedIds);
-
-    setArrangingInstance(null);
-
-    if (conflictCount > 0) {
-      toast({
-        title: en ? `Auto-arranged with ${conflictCount} conflict(s)` : `自动排序完成，${conflictCount} 个冲突`,
-        description: en
-          ? 'Conflicts are shown in red. Please review manually.'
-          : '冲突已用红色标出，请手动检查。',
-        variant: 'destructive',
-      });
-    } else {
-      toast({ title: en ? 'Auto-arranged successfully!' : '自动排序完成！' });
-    }
-  };
 
   // Group instances by parent session for the "Generate More" dropdown
   const recurringSessionIds = [...new Set(instances.map(i => i.session_id))];
@@ -457,26 +446,7 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
                 <div className="space-y-3">
                   {instanceWishes.length > 0 ? (
                     <>
-                      {/* Auto-arrange button — only for editable sessions */}
-                      {!isPublished && (
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="gap-1.5 text-xs"
-                            disabled={arrangingInstance === instance.id}
-                            onClick={() => handleAutoArrange(instance)}
-                          >
-                            <Wand2 className="w-3.5 h-3.5" />
-                            {arrangingInstance === instance.id
-                              ? (en ? 'Arranging…' : '排序中…')
-                              : (en ? 'Auto Arrange Based on Availability' : '按可用时间自动排序')}
-                          </Button>
-                          <span className="text-xs text-muted-foreground">
-                            {en ? 'Suggestion only — you can reorder manually.' : '仅供参考，可手动调整。'}
-                          </span>
-                        </div>
-                      )}
+                      {/* Auto-arranged silently on load — manual reorder still available */}
 
                       <div className="bg-secondary/20 rounded-lg border border-border divide-y divide-border">
                         {instanceWishes.map((wish, i) => {
