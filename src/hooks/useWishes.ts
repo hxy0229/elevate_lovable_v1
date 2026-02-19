@@ -152,7 +152,16 @@ export function useWishes() {
 
   const uploadWishFile = async (instanceId: string, file: File) => {
     if (!user) return null;
-    const filePath = `${user.id}/${instanceId}/${Date.now()}_${file.name}`;
+    // Sanitize filename: replace spaces and non-ASCII chars with underscores/safe chars
+    const ext = file.name.split('.').pop() || '';
+    const baseName = file.name
+      .replace(/\.[^.]+$/, '') // remove extension
+      .replace(/[^\x00-\x7F]/g, '_') // replace non-ASCII (Chinese, etc.) with _
+      .replace(/[^a-zA-Z0-9_\-]/g, '_') // replace remaining unsafe chars
+      .replace(/_+/g, '_') // collapse multiple underscores
+      .slice(0, 50); // limit length
+    const safeFilename = `${baseName}.${ext}`;
+    const filePath = `${user.id}/${instanceId}/${Date.now()}_${safeFilename}`;
     const { error } = await supabase.storage.from('wish-files').upload(filePath, file);
     if (error) {
       toast({ title: 'Upload failed', description: error.message, variant: 'destructive' });
