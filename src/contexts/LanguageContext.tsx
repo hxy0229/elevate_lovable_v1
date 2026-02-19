@@ -77,7 +77,7 @@ const translations: Record<Language, Record<string, string>> = {
 
     // Sessions
     "sessions.title": "Weekly Sessions",
-    "sessions.subtitle": "Join our weekly sessions — jam, sing, and make music together!",
+    "sessions.subtitle": "Join our regular practice and rehearsal sessions",
     "sessions.tuesday": "Tuesday",
     "sessions.thursday": "Thursday",
     "sessions.soloVocal": "Solo Vocal Practice",
@@ -234,8 +234,8 @@ const translations: Record<Language, Record<string, string>> = {
     "rooms.roomDesc": "配备全套乐队设备的专业练习空间",
 
     // Sessions
-    "sessions.title": "每周活动",
-    "sessions.subtitle": "加入我们的常规练习和排练活动",
+    "sessions.title": "每周音乐活动",
+    "sessions.subtitle": "加入我们的每周音乐活动，一起玩音乐、尽情歌唱！",
     "sessions.tuesday": "周二",
     "sessions.thursday": "周四",
     "sessions.soloVocal": "独唱练习",
