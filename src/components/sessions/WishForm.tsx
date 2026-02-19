@@ -456,7 +456,7 @@ const WishForm = ({ instanceId, existingWish, onSubmit, onCancel, onUploadFile, 
             placeholder={
               en
                 ? "e.g., Rock version, acoustic ballad, slower tempo, skip verse 2, guitar solo intro…"
-                : "例：摇滚版本、民谣风格、节奏慢一点、跳过第二段、吉他独奏开场…"
+                : "例：摇滚版本、民谣风格、节奏慢一点、跳过第二段主歌、吉他独奏开场…"
             }
             rows={3}
           />
@@ -466,9 +466,7 @@ const WishForm = ({ instanceId, existingWish, onSubmit, onCancel, onUploadFile, 
         <FormSection
           icon={<StickyNote className="w-4 h-4" />}
           title={en ? "Additional Notes" : "其他备注"}
-          subtitle={
-            en ? "Anything else the organiser should know about your performance." : "其他主办方需要了解的演出信息。"
-          }
+          subtitle={en ? "Anything else the admin should know" : "其他管理员需要知道的事项"}
         >
           <Textarea
             value={specialNotes}
