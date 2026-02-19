@@ -74,7 +74,7 @@ const Index = () => {
             <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4 animate-fade-in px-4 sm:px-0">
               <Link to="/sessions" className="w-full sm:w-auto">
                 <Button size="lg" className="w-full sm:w-auto rounded-full font-semibold px-8 h-12 text-base gold-glow">
-                  {user ? (language === "en" ? "🎶 Join Session" : "🎶 参与活动") : t("home.cta.sessions")}
+                  {user ? (language === "en" ? "🎶 Join Sessions" : "🎶 参与活动") : t("home.cta.sessions")}
                 </Button>
               </Link>
               <Link to="/lessons" className="w-full sm:w-auto">
