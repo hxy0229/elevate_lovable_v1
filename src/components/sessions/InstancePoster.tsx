@@ -29,6 +29,40 @@ const InstancePoster = ({ instance, wishes, profileMap }: InstancePosterProps) =
   const sessionName = instance.name_override || (en ? session?.name : (session?.name_cn || session?.name)) || '';
   const schedule = calculateSchedule(instance.start_time, wishes.length);
 
+  // Recursively resolve all CSS-variable-based colors to computed values on a cloned tree
+  const resolveComputedStyles = (original: Element, clone: Element) => {
+    const origStyle = window.getComputedStyle(original);
+    const cloneEl = clone as HTMLElement;
+
+    // Inline key visual properties so html2canvas doesn't need to resolve CSS vars
+    const props = [
+      'color', 'backgroundColor', 'borderColor', 'outlineColor',
+      'backgroundImage', 'boxShadow', 'textShadow',
+      'borderTopColor', 'borderBottomColor', 'borderLeftColor', 'borderRightColor',
+    ];
+    for (const prop of props) {
+      const val = origStyle.getPropertyValue(prop);
+      if (val && val !== 'none' && val !== 'rgba(0, 0, 0, 0)') {
+        cloneEl.style.setProperty(prop, val);
+      }
+    }
+
+    // Also inline font properties for consistency
+    cloneEl.style.fontFamily = origStyle.fontFamily;
+    cloneEl.style.fontSize = origStyle.fontSize;
+    cloneEl.style.fontWeight = origStyle.fontWeight;
+    cloneEl.style.lineHeight = origStyle.lineHeight;
+    cloneEl.style.letterSpacing = origStyle.letterSpacing;
+
+    const origChildren = original.children;
+    const cloneChildren = clone.children;
+    for (let i = 0; i < origChildren.length; i++) {
+      if (cloneChildren[i]) {
+        resolveComputedStyles(origChildren[i], cloneChildren[i]);
+      }
+    }
+  };
+
   const handleDownload = async () => {
     const el = posterRef.current;
     if (!el) return;
@@ -36,7 +70,6 @@ const InstancePoster = ({ instance, wishes, profileMap }: InstancePosterProps) =
     try {
       const { default: html2canvas } = await import('html2canvas');
 
-      // Measure the element's full rendered size
       const rect = el.getBoundingClientRect();
 
       const canvas = await html2canvas(el, {
@@ -51,6 +84,9 @@ const InstancePoster = ({ instance, wishes, profileMap }: InstancePosterProps) =
         scrollY: 0,
         x: 0,
         y: 0,
+        onclone: (_doc: Document, clonedEl: HTMLElement) => {
+          resolveComputedStyles(el, clonedEl);
+        },
       });
 
       const url = canvas.toDataURL('image/png');
