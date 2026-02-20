@@ -13,7 +13,7 @@ import Layout from '@/components/layout/Layout';
 
 const Auth = () => {
   const { t, language } = useLanguage();
-  const { user, signUp, signIn } = useAuth();
+  const { user, signIn } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLogin, setIsLogin] = useState(true);
@@ -81,47 +81,44 @@ const Auth = () => {
         toast({ title: msg, variant: 'destructive' });
       }
     } else {
-      const { error, data } = await signUp(emailOrUsername.trim(), password, displayName.trim());
-      if (error) {
-        const msg = error.message?.includes('already registered')
-          ? (language === 'zh' ? '该邮箱已注册' : 'This email is already registered')
-          : error.message;
-        toast({ title: msg, variant: 'destructive' });
-      } else {
-        // Validate invite code and assign role after signup
-        if (data?.session) {
-          try {
-            const { data: result, error: fnError } = await supabase.functions.invoke('claim-admin', {
-              body: { invite_code: inviteCode.trim() },
-            });
-            if (fnError || !result?.success) {
-              // Role assignment failed — sign them out and show error
-              await supabase.auth.signOut();
-              setInviteError(language === 'zh' ? '邀请码无效，注册已取消' : 'Invalid invite code — signup cancelled');
-              setSubmitting(false);
-              return;
-            }
-            const roleLabel = result.role === 'admin'
-              ? (language === 'zh' ? '管理员' : 'Admin')
-              : (language === 'zh' ? '成员' : 'Member');
-            toast({
-              title: language === 'zh' ? '注册成功！' : 'Account created!',
-              description: language === 'zh'
-                ? `已授予【${roleLabel}】权限，请查看邮箱验证链接`
-                : `${roleLabel} access granted. Please check your email to verify your account.`,
-            });
-          } catch {
-            await supabase.auth.signOut();
-            toast({ title: language === 'zh' ? '注册失败，请重试' : 'Signup failed, please try again', variant: 'destructive' });
+      // Use atomic edge function: validates invite code BEFORE creating account
+      try {
+        const { data: result, error: fnError } = await supabase.functions.invoke('signup-with-invite', {
+          body: {
+            email: emailOrUsername.trim(),
+            password,
+            display_name: displayName.trim(),
+            invite_code: inviteCode.trim(),
+          },
+        });
+
+        if (fnError || !result?.success) {
+          const serverMsg: string = result?.error ?? fnError?.message ?? '';
+          if (serverMsg.toLowerCase().includes('invite') || serverMsg.toLowerCase().includes('邀请')) {
+            setInviteError(serverMsg || (language === 'zh' ? '邀请码无效' : 'Invalid invite code'));
+          } else {
+            toast({ title: serverMsg || (language === 'zh' ? '注册失败' : 'Signup failed'), variant: 'destructive' });
           }
         } else {
-          // Email confirmation required — role will be assigned on next login attempt
-          // We can't call edge functions without a session, inform the user to contact admin
+          // If we got a session back, set it directly so the user is logged in immediately
+          if (result.session) {
+            await supabase.auth.setSession({
+              access_token: result.session.access_token,
+              refresh_token: result.session.refresh_token,
+            });
+          }
+          const roleLabel = result.role === 'admin'
+            ? (language === 'zh' ? '管理员' : 'Admin')
+            : (language === 'zh' ? '成员' : 'Member');
           toast({
             title: language === 'zh' ? '注册成功！' : 'Account created!',
-            description: language === 'zh' ? '请查看邮箱验证链接后登录' : 'Please verify your email then sign in.',
+            description: language === 'zh'
+              ? `已授予【${roleLabel}】权限，欢迎加入！`
+              : `Welcome! You've been granted ${roleLabel} access.`,
           });
         }
+      } catch {
+        toast({ title: language === 'zh' ? '注册失败，请重试' : 'Signup failed, please try again', variant: 'destructive' });
       }
     }
     setSubmitting(false);
