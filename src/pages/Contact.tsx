@@ -18,19 +18,16 @@ import { toast } from '@/hooks/use-toast';
 
 // Configurable contact info — update these when ready
 const CONTACT_INFO = {
-  whatsapp: '', // e.g. '+6591234567'
-  email: '', // e.g. 'info@elevatemusic.sg'
-  address: '809 French Rd, Kitchener Complex, Singapore 200809',
+  phone: '92980586',
+  address: 'Level 3, Blk 809 French Rd, Kitchener Complex, Singapore 200809',
 };
 
 const LESSON_OPTIONS = [
   { value: 'vocal', labelEn: 'Vocal Training', labelZh: '声乐培训' },
   { value: 'piano', labelEn: 'Piano', labelZh: '钢琴' },
   { value: 'guitar', labelEn: 'Guitar', labelZh: '吉他' },
-  { value: 'ukulele', labelEn: 'Ukulele', labelZh: '尤克里里' },
   { value: 'violin', labelEn: 'Violin', labelZh: '小提琴' },
   { value: 'drums', labelEn: 'Drums', labelZh: '架子鼓' },
-  { value: 'bass', labelEn: 'Bass', labelZh: '贝斯' },
 ];
 
 const contactSchema = z.object({
@@ -184,44 +181,20 @@ const Contact = () => {
                     {language === 'zh' ? '联系方式' : 'Get in Touch'}
                   </h3>
 
-                  {CONTACT_INFO.whatsapp && (
-                    <div className="flex items-start gap-3 text-sm text-muted-foreground">
-                      <Phone className="w-4 h-4 mt-0.5 flex-shrink-0 text-primary" />
-                      <a
-                        href={`https://wa.me/${CONTACT_INFO.whatsapp.replace(/[^0-9]/g, '')}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="hover:text-primary transition-colors"
-                      >
-                        {CONTACT_INFO.whatsapp}
-                      </a>
-                    </div>
-                  )}
+                  <div className="flex items-start gap-3 text-sm text-muted-foreground">
+                    <Phone className="w-4 h-4 mt-0.5 flex-shrink-0 text-primary" />
+                    <a
+                      href={`tel:+65${CONTACT_INFO.phone}`}
+                      className="hover:text-primary transition-colors"
+                    >
+                      {CONTACT_INFO.phone}
+                    </a>
+                  </div>
 
-                  {CONTACT_INFO.email && (
-                    <div className="flex items-start gap-3 text-sm text-muted-foreground">
-                      <Mail className="w-4 h-4 mt-0.5 flex-shrink-0 text-primary" />
-                      <a
-                        href={`mailto:${CONTACT_INFO.email}`}
-                        className="hover:text-primary transition-colors"
-                      >
-                        {CONTACT_INFO.email}
-                      </a>
-                    </div>
-                  )}
-
-                  {CONTACT_INFO.address && (
-                    <div className="flex items-start gap-3 text-sm text-muted-foreground">
-                      <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0 text-primary" />
-                      <span>{CONTACT_INFO.address}</span>
-                    </div>
-                  )}
-
-                  {!CONTACT_INFO.whatsapp && !CONTACT_INFO.email && (
-                    <p className="text-sm text-muted-foreground italic">
-                      {language === 'zh' ? '联系方式即将公布' : 'Contact details coming soon'}
-                    </p>
-                  )}
+                  <div className="flex items-start gap-3 text-sm text-muted-foreground">
+                    <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0 text-primary" />
+                    <span>{CONTACT_INFO.address}</span>
+                  </div>
                 </CardContent>
               </Card>
             </div>
