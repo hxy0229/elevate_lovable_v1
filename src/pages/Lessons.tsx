@@ -60,15 +60,6 @@ const Lessons = () => {
         ? '与其他乐手一起排练和演出，从流行到摇滚，体验真正的乐队合奏乐趣。'
         : 'Rehearse and perform with fellow musicians across genres — from pop to rock, experience the thrill of playing in a real band.',
     },
-    {
-      id: 'ensemble',
-      name: language === 'zh' ? '古典合奏' : 'Classical Ensemble',
-      icon: Music,
-      image: 'https://images.unsplash.com/photo-1465847899084-d164df4dedc6?w=400',
-      description: language === 'zh'
-        ? '参与古典室内乐合奏，与志同道合的演奏者一同探索经典曲目。'
-        : 'Participate in classical chamber ensembles and explore timeless repertoire with like-minded musicians.',
-    },
   ];
 
   return (
