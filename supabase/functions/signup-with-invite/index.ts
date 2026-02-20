@@ -33,8 +33,8 @@ Deno.serve(async (req) => {
 
     if (isRateLimited(ip)) {
       return new Response(
-        JSON.stringify({ error: "Too many signup attempts. Please try again later." }),
-        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ success: false, error: "Too many signup attempts. Please try again later." }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -43,14 +43,14 @@ Deno.serve(async (req) => {
     // --- Validate inputs ---
     if (!email || !password || !display_name || !invite_code) {
       return new Response(
-        JSON.stringify({ error: "Missing required fields" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ success: false, error: "Missing required fields" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
     if (typeof invite_code !== "string" || invite_code.length > 100) {
       return new Response(
-        JSON.stringify({ error: "Invalid invite code format" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ success: false, error: "Invalid invite code format" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -64,12 +64,11 @@ Deno.serve(async (req) => {
     else if (memberCode && trimmed === memberCode.trim()) assignedRole = "user";
 
     if (!assignedRole) {
-      // Delay to slow brute force
       await new Promise((r) => setTimeout(r, 2000));
       console.log("Signup blocked — invalid invite code from IP:", ip);
       return new Response(
-        JSON.stringify({ error: "Invalid invite code. Please contact an admin to get access." }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ success: false, error: "Invalid invite code. Please check the code or contact an admin." }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -91,8 +90,8 @@ Deno.serve(async (req) => {
         ? "This email is already registered."
         : createError.message;
       return new Response(
-        JSON.stringify({ error: msg }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ success: false, error: msg }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -104,12 +103,11 @@ Deno.serve(async (req) => {
       .insert({ user_id: userId, role: assignedRole });
 
     if (roleError) {
-      // Clean up: delete the user we just created so we don't leave orphans
       await adminClient.auth.admin.deleteUser(userId);
       console.error("Failed to assign role, user deleted:", roleError);
       return new Response(
-        JSON.stringify({ error: "Failed to assign role. Please try again." }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ success: false, error: "Failed to assign role. Please try again." }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -125,7 +123,6 @@ Deno.serve(async (req) => {
     });
 
     if (signInError || !signInData.session) {
-      // User created and role assigned — they just need to sign in manually
       console.log("User created but auto-signin failed:", signInError?.message);
       return new Response(
         JSON.stringify({ success: true, role: assignedRole, session: null }),
@@ -141,8 +138,8 @@ Deno.serve(async (req) => {
   } catch (err) {
     console.error("Unexpected error:", err);
     return new Response(
-      JSON.stringify({ error: "Internal error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ success: false, error: "Internal error. Please try again." }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
