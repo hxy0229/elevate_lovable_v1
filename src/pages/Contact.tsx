@@ -23,11 +23,13 @@ const CONTACT_INFO = {
 };
 
 const LESSON_OPTIONS = [
-  { value: 'vocal', labelEn: 'Vocal Training', labelZh: '声乐培训' },
+  { value: 'vocal', labelEn: 'Vocal', labelZh: '声乐' },
   { value: 'piano', labelEn: 'Piano', labelZh: '钢琴' },
   { value: 'guitar', labelEn: 'Guitar', labelZh: '吉他' },
   { value: 'violin', labelEn: 'Violin', labelZh: '小提琴' },
   { value: 'drums', labelEn: 'Drums', labelZh: '架子鼓' },
+  { value: 'band', labelEn: 'Band', labelZh: '乐队' },
+  { value: 'choir', labelEn: 'Choir', labelZh: '合唱团' },
 ];
 
 const contactSchema = z.object({
