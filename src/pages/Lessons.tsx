@@ -103,11 +103,6 @@ const Lessons = () => {
                     {lesson.name}
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="pb-2">
-                  <p className="text-sm text-muted-foreground">
-                    {t('lessons.contactUs')}
-                  </p>
-                </CardContent>
                 <CardFooter className="pt-2">
                   <Link to={`/contact?lesson=${lesson.id}`} className="w-full">
                     <Button 
@@ -122,16 +117,6 @@ const Lessons = () => {
             ))}
           </div>
 
-          {/* Price Note */}
-          <div className="text-center mt-12">
-            <Card className="inline-block bg-secondary/50 border-border">
-              <CardContent className="py-4 px-8">
-                <p className="text-muted-foreground text-sm">
-                  💡 {t('lessons.priceNote')}
-                </p>
-              </CardContent>
-            </Card>
-          </div>
         </div>
       </section>
     </Layout>
