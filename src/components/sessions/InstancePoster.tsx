@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -20,6 +20,20 @@ const ROLE_ICONS: Record<string, string> = {
   bass: '🎸',
 };
 
+/**
+ * Resolve a CSS variable to a concrete rgb/hex color.
+ * e.g. getCSSColor('--primary') => 'rgb(120, 80, 200)'
+ */
+function getCSSColor(varName: string, alpha?: number): string {
+  const raw = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+  if (!raw) return alpha !== undefined ? `rgba(0,0,0,${alpha})` : '#000';
+  // raw is typically HSL values like "220 14% 10%" (without hsl() wrapper)
+  if (alpha !== undefined) {
+    return `hsla(${raw.replace(/ /g, ', ')}, ${alpha})`;
+  }
+  return `hsl(${raw.replace(/ /g, ', ')})`;
+}
+
 const InstancePoster = ({ instance, wishes, profileMap }: InstancePosterProps) => {
   const { language } = useLanguage();
   const en = language === 'en';
@@ -29,39 +43,20 @@ const InstancePoster = ({ instance, wishes, profileMap }: InstancePosterProps) =
   const sessionName = instance.name_override || (en ? session?.name : (session?.name_cn || session?.name)) || '';
   const schedule = calculateSchedule(instance.start_time, wishes.length);
 
-  // Recursively resolve all CSS-variable-based colors to computed values on a cloned tree
-  const resolveComputedStyles = (original: Element, clone: Element) => {
-    const origStyle = window.getComputedStyle(original);
-    const cloneEl = clone as HTMLElement;
-
-    // Inline key visual properties so html2canvas doesn't need to resolve CSS vars
-    const props = [
-      'color', 'backgroundColor', 'borderColor', 'outlineColor',
-      'backgroundImage', 'boxShadow', 'textShadow',
-      'borderTopColor', 'borderBottomColor', 'borderLeftColor', 'borderRightColor',
-    ];
-    for (const prop of props) {
-      const val = origStyle.getPropertyValue(prop);
-      if (val && val !== 'none' && val !== 'rgba(0, 0, 0, 0)') {
-        cloneEl.style.setProperty(prop, val);
-      }
-    }
-
-    // Also inline font properties for consistency
-    cloneEl.style.fontFamily = origStyle.fontFamily;
-    cloneEl.style.fontSize = origStyle.fontSize;
-    cloneEl.style.fontWeight = origStyle.fontWeight;
-    cloneEl.style.lineHeight = origStyle.lineHeight;
-    cloneEl.style.letterSpacing = origStyle.letterSpacing;
-
-    const origChildren = original.children;
-    const cloneChildren = clone.children;
-    for (let i = 0; i < origChildren.length; i++) {
-      if (cloneChildren[i]) {
-        resolveComputedStyles(origChildren[i], cloneChildren[i]);
-      }
-    }
-  };
+  // Pre-compute all colors from CSS variables into concrete values
+  // so html2canvas never encounters var() references
+  const colors = useMemo(() => ({
+    foreground: getCSSColor('--foreground'),
+    foreground80: getCSSColor('--foreground', 0.8),
+    primary: getCSSColor('--primary'),
+    primary15: getCSSColor('--primary', 0.15),
+    primary10: getCSSColor('--primary', 0.1),
+    primary20: getCSSColor('--primary', 0.2),
+    secondary: getCSSColor('--secondary'),
+    muted: getCSSColor('--muted-foreground'),
+    card50: getCSSColor('--card', 0.5),
+    border: getCSSColor('--border'),
+  }), []);
 
   const handleDownload = async () => {
     const el = posterRef.current;
@@ -69,7 +64,6 @@ const InstancePoster = ({ instance, wishes, profileMap }: InstancePosterProps) =
 
     try {
       const { default: html2canvas } = await import('html2canvas');
-
       const rect = el.getBoundingClientRect();
 
       const canvas = await html2canvas(el, {
@@ -84,9 +78,6 @@ const InstancePoster = ({ instance, wishes, profileMap }: InstancePosterProps) =
         scrollY: 0,
         x: 0,
         y: 0,
-        onclone: (_doc: Document, clonedEl: HTMLElement) => {
-          resolveComputedStyles(el, clonedEl);
-        },
       });
 
       const url = canvas.toDataURL('image/png');
@@ -101,46 +92,47 @@ const InstancePoster = ({ instance, wishes, profileMap }: InstancePosterProps) =
 
   return (
     <div className="space-y-4">
-      {/* Poster Preview — inline styles to ensure html2canvas consistency */}
+      {/* Poster — NO Tailwind color classes, NO CSS variables. All colors hardcoded from computed values. */}
       <div
         ref={posterRef}
         style={{
-          background: 'linear-gradient(135deg, hsl(var(--primary) / 0.15), hsl(var(--secondary)), hsl(var(--primary) / 0.1))',
+          background: `linear-gradient(135deg, ${colors.primary15}, ${colors.secondary}, ${colors.primary10})`,
           padding: '32px',
           width: '600px',
           borderRadius: '12px',
           overflow: 'visible',
           position: 'relative',
+          fontFamily: 'system-ui, -apple-system, sans-serif',
         }}
       >
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-          <div className="font-display text-foreground" style={{ fontSize: '24px', fontWeight: 700, lineHeight: 1.3, marginBottom: '4px', wordBreak: 'break-word' }}>
+          <div style={{ fontSize: '24px', fontWeight: 700, lineHeight: 1.3, marginBottom: '4px', wordBreak: 'break-word', color: colors.foreground }}>
             🎵 {sessionName}
           </div>
           {instance.theme && (
-            <div className="text-primary" style={{ fontSize: '16px', fontWeight: 500, lineHeight: 1.4, wordBreak: 'break-word' }}>
+            <div style={{ fontSize: '16px', fontWeight: 500, lineHeight: 1.4, wordBreak: 'break-word', color: colors.primary }}>
               🎨 {en ? instance.theme : (instance.theme_cn || instance.theme)}
             </div>
           )}
-          <div className="text-muted-foreground" style={{ marginTop: '12px', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', flexWrap: 'wrap' }}>
+          <div style={{ marginTop: '12px', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', flexWrap: 'wrap', color: colors.muted }}>
             <span>📅 {formatSessionDate(instance.instance_date, language)}</span>
             <span>⏰ {formatTime12h(instance.start_time)} – {formatTime12h(instance.end_time)}</span>
           </div>
           {instance.announcement && (
-            <div className="text-foreground/80" style={{ marginTop: '8px', fontSize: '13px', fontStyle: 'italic', wordBreak: 'break-word', lineHeight: 1.5 }}>
+            <div style={{ marginTop: '8px', fontSize: '13px', fontStyle: 'italic', wordBreak: 'break-word', lineHeight: 1.5, color: colors.foreground80 }}>
               📢 {en ? instance.announcement : (instance.announcement_cn || instance.announcement)}
             </div>
           )}
         </div>
 
         {/* Divider */}
-        <div className="bg-border" style={{ height: '1px', marginBottom: '16px' }} />
+        <div style={{ height: '1px', marginBottom: '16px', backgroundColor: colors.border }} />
 
         {/* Song List */}
         {wishes.length > 0 ? (
           <div>
-            <div className="text-muted-foreground" style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+            <div style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase' as const, letterSpacing: '0.05em', marginBottom: '8px', color: colors.muted }}>
               {en ? `Schedule (${wishes.length} songs)` : `节目单（${wishes.length} 首）`}
             </div>
             {wishes.map((wish, i) => (
@@ -152,11 +144,10 @@ const InstancePoster = ({ instance, wishes, profileMap }: InstancePosterProps) =
                   gap: '12px',
                   padding: '8px 12px',
                   borderRadius: '8px',
-                  background: i % 2 === 0 ? 'hsl(var(--card) / 0.5)' : 'transparent',
+                  background: i % 2 === 0 ? colors.card50 : 'transparent',
                 }}
               >
                 <span
-                  className="bg-primary/20 text-primary"
                   style={{
                     width: '24px',
                     height: '24px',
@@ -168,41 +159,43 @@ const InstancePoster = ({ instance, wishes, profileMap }: InstancePosterProps) =
                     justifyContent: 'center',
                     flexShrink: 0,
                     marginTop: '2px',
+                    backgroundColor: colors.primary20,
+                    color: colors.primary,
                   }}
                 >
                   {i + 1}
                 </span>
-                <div style={{ flex: 1 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', flexWrap: 'wrap', lineHeight: 1.5 }}>
                     <span style={{ fontSize: '13px' }}>{ROLE_ICONS[wish.primary_role] || '🎵'}</span>
-                    <span className="text-foreground" style={{ fontWeight: 500, fontSize: '13px', wordBreak: 'break-word' }}>
+                    <span style={{ fontWeight: 500, fontSize: '13px', wordBreak: 'break-word', color: colors.foreground }}>
                       {wish.artist && `${wish.artist} - `}《{wish.song_title}》
                     </span>
                     {wish.is_self_accompanied && (
-                      <span className="text-muted-foreground" style={{ fontSize: '11px' }}>
+                      <span style={{ fontSize: '11px', color: colors.muted }}>
                         ({en ? 'self-accompanied' : '弹唱'})
                       </span>
                     )}
                   </div>
-                  <div className="text-muted-foreground" style={{ fontSize: '11px', lineHeight: 1.4, marginTop: '2px' }}>
+                  <div style={{ fontSize: '11px', lineHeight: 1.4, marginTop: '2px', color: colors.muted }}>
                     👤 {profileMap[wish.user_id] || '—'}
                     {wish.song_version && ` · ${wish.song_version}`}
                   </div>
                 </div>
-                <div className="text-muted-foreground" style={{ fontSize: '11px', flexShrink: 0, marginTop: '3px', whiteSpace: 'nowrap' }}>
+                <div style={{ fontSize: '11px', flexShrink: 0, marginTop: '3px', whiteSpace: 'nowrap', color: colors.muted }}>
                   {schedule.times[i]?.split(' – ')[0] || ''}
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-muted-foreground" style={{ textAlign: 'center', padding: '16px 0' }}>
+          <p style={{ textAlign: 'center', padding: '16px 0', color: colors.muted }}>
             {en ? 'No songs scheduled' : '暂无节目'}
           </p>
         )}
 
         {/* Footer */}
-        <div className="text-muted-foreground" style={{ marginTop: '24px', textAlign: 'center', fontSize: '11px', lineHeight: 1.5 }}>
+        <div style={{ marginTop: '24px', textAlign: 'center', fontSize: '11px', lineHeight: 1.5, color: colors.muted }}>
           {en
             ? 'Schedule is tentative and subject to change based on actual progress.'
             : '时间安排仅供参考，可能根据实际进度有所调整。'}
@@ -210,11 +203,7 @@ const InstancePoster = ({ instance, wishes, profileMap }: InstancePosterProps) =
       </div>
 
       {/* Download Button */}
-      <Button
-        onClick={handleDownload}
-        variant="outline"
-        className="rounded-full gap-2"
-      >
+      <Button onClick={handleDownload} variant="outline" className="rounded-full gap-2">
         <Download className="w-4 h-4" />
         {en ? 'Download Poster (PNG)' : '下载海报 (PNG)'}
       </Button>
