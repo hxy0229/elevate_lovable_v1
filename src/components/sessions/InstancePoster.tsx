@@ -1,4 +1,4 @@
-import { useRef, useMemo } from 'react';
+import { useRef, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -20,14 +20,9 @@ const ROLE_ICONS: Record<string, string> = {
   bass: '🎸',
 };
 
-/**
- * Resolve a CSS variable to a concrete rgb/hex color.
- * e.g. getCSSColor('--primary') => 'rgb(120, 80, 200)'
- */
 function getCSSColor(varName: string, alpha?: number): string {
   const raw = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
   if (!raw) return alpha !== undefined ? `rgba(0,0,0,${alpha})` : '#000';
-  // raw is typically HSL values like "220 14% 10%" (without hsl() wrapper)
   if (alpha !== undefined) {
     return `hsla(${raw.replace(/ /g, ', ')}, ${alpha})`;
   }
@@ -43,8 +38,6 @@ const InstancePoster = ({ instance, wishes, profileMap }: InstancePosterProps) =
   const sessionName = instance.name_override || (en ? session?.name : (session?.name_cn || session?.name)) || '';
   const schedule = calculateSchedule(instance.start_time, wishes.length);
 
-  // Pre-compute all colors from CSS variables into concrete values
-  // so html2canvas never encounters var() references
   const colors = useMemo(() => ({
     foreground: getCSSColor('--foreground'),
     foreground80: getCSSColor('--foreground', 0.8),
@@ -58,41 +51,44 @@ const InstancePoster = ({ instance, wishes, profileMap }: InstancePosterProps) =
     border: getCSSColor('--border'),
   }), []);
 
-  const handleDownload = async () => {
+  const handleDownload = useCallback(async () => {
     const el = posterRef.current;
     if (!el) return;
 
     try {
-      const { default: html2canvas } = await import('html2canvas');
-      const rect = el.getBoundingClientRect();
+      // Wait for fonts to be ready
+      await document.fonts.ready;
 
-      const canvas = await html2canvas(el, {
-        scale: 2,
-        backgroundColor: null,
-        useCORS: true,
-        width: rect.width,
-        height: rect.height,
-        windowWidth: rect.width,
-        windowHeight: rect.height,
-        scrollX: 0,
-        scrollY: 0,
-        x: 0,
-        y: 0,
+      const { toPng } = await import('html-to-image');
+
+      // html-to-image uses the browser's own rendering via SVG foreignObject
+      // This guarantees pixel-perfect output matching the preview exactly
+      const dataUrl = await toPng(el, {
+        pixelRatio: 2,
+        cacheBust: true,
+        // Ensure proper dimensions
+        width: el.offsetWidth,
+        height: el.offsetHeight,
+        style: {
+          // Ensure no transform or margin interferes
+          transform: 'none',
+          margin: '0',
+        },
       });
 
-      const url = canvas.toDataURL('image/png');
       const link = document.createElement('a');
-      link.href = url;
+      link.href = dataUrl;
       link.download = `poster-${instance.instance_date}.png`;
       link.click();
-    } catch {
+    } catch (err) {
+      console.error('Poster export failed:', err);
       alert('Download not available. Please screenshot the poster.');
     }
-  };
+  }, [instance.instance_date]);
 
   return (
     <div className="space-y-4">
-      {/* Poster — NO Tailwind color classes, NO CSS variables. All colors hardcoded from computed values. */}
+      {/* Poster — all colors are pre-computed, no CSS variables for maximum compatibility */}
       <div
         ref={posterRef}
         style={{
