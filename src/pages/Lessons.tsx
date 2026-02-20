@@ -53,7 +53,7 @@ const Lessons = () => {
     },
     {
       id: 'band',
-      name: language === 'zh' ? '乐队合奏' : 'Band Jam',
+      name: language === 'zh' ? '乐队' : 'Band',
       icon: Megaphone,
       image: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400',
       description: language === 'zh'
