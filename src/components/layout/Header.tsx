@@ -1,16 +1,14 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, X, Music, Globe, LogOut, Shield } from 'lucide-react';
+import { Menu, X, Music, Globe, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { useAdmin } from '@/hooks/useAdmin';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { language, setLanguage, t } = useLanguage();
-  const { user, loading: authLoading, signOut } = useAuth();
-  const { isAdmin, loading: adminLoading } = useAdmin();
+  const { user, loading, isAdmin, signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -22,8 +20,6 @@ const Header = () => {
     { path: '/lessons', label: t('nav.lessons') },
   ];
 
-  const showAdmin = isAdmin && !adminLoading;
-
   const isActive = (path: string) => location.pathname === path;
   const toggleLanguage = () => setLanguage(language === 'en' ? 'zh' : 'en');
 
@@ -32,8 +28,7 @@ const Header = () => {
     navigate('/');
   };
 
-  // Determine auth button visibility — hide during loading to prevent flicker
-  const showAuthArea = !authLoading;
+  const showAuthArea = !loading;
 
   return (
     <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-xl border-b border-border">
@@ -48,7 +43,6 @@ const Header = () => {
             </span>
           </Link>
 
-          {/* Desktop nav — always render admin slot to prevent layout shift */}
           <nav className="hidden md:flex items-center gap-1">
             {baseLinks.map((link) => (
               <Link
@@ -63,16 +57,16 @@ const Header = () => {
                 {link.label}
               </Link>
             ))}
-            {/* Admin link: always in DOM with fixed width to prevent shift, invisible when not applicable */}
+            {/* Admin link: always in DOM to prevent layout shift */}
             <Link
               to="/admin"
               className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
                 isActive('/admin')
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
-              } ${showAdmin ? '' : 'invisible pointer-events-none'}`}
-              tabIndex={showAdmin ? undefined : -1}
-              aria-hidden={!showAdmin || undefined}
+              } ${isAdmin ? '' : 'invisible pointer-events-none'}`}
+              tabIndex={isAdmin ? undefined : -1}
+              aria-hidden={!isAdmin || undefined}
             >
               {t('nav.admin')}
             </Link>
@@ -84,7 +78,6 @@ const Header = () => {
               <span className="hidden sm:inline text-sm">{language === 'en' ? '中文' : 'EN'}</span>
             </Button>
 
-            {/* Auth area — use opacity to prevent layout shift during loading */}
             <div className={`flex items-center gap-2 transition-opacity duration-150 ${showAuthArea ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
               {user ? (
                 <Button variant="ghost" size="sm" onClick={handleSignOut} className="rounded-full px-4 gap-1.5">
@@ -123,7 +116,7 @@ const Header = () => {
                   {link.label}
                 </Link>
               ))}
-              {showAdmin && (
+              {isAdmin && (
                 <Link
                   to="/admin"
                   onClick={() => setIsMenuOpen(false)}
