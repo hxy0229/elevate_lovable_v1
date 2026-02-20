@@ -42,16 +42,15 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const userId = claimsData.claims.sub as string;
+    const userId = user.id;
 
     // Rate limit by user ID to prevent brute force
     if (isRateLimited(userId)) {
@@ -70,8 +69,19 @@ Deno.serve(async (req) => {
       });
     }
 
-    const correctCode = Deno.env.get("ADMIN_INVITE_CODE");
-    if (!correctCode || invite_code.trim() !== correctCode.trim()) {
+    const adminCode = Deno.env.get("ADMIN_INVITE_CODE");
+    const memberCode = Deno.env.get("MEMBER_INVITE_CODE");
+
+    const trimmedCode = invite_code.trim();
+    let assignedRole: "admin" | "user" | null = null;
+
+    if (adminCode && trimmedCode === adminCode.trim()) {
+      assignedRole = "admin";
+    } else if (memberCode && trimmedCode === memberCode.trim()) {
+      assignedRole = "user";
+    }
+
+    if (!assignedRole) {
       // Add delay on failed attempts to slow brute force
       await new Promise((r) => setTimeout(r, 2000));
       console.log("Invalid invite code attempt by user:", userId);
@@ -81,40 +91,40 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Use service role to insert admin role
+    // Use service role to insert role
     const adminClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Check if already admin
+    // Check if already has this role
     const { data: existing } = await adminClient
       .from("user_roles")
       .select("id")
       .eq("user_id", userId)
-      .eq("role", "admin")
+      .eq("role", assignedRole)
       .maybeSingle();
 
     if (existing) {
-      return new Response(JSON.stringify({ success: true, message: "Already admin" }), {
+      return new Response(JSON.stringify({ success: true, role: assignedRole, message: "Role already assigned" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const { error: insertError } = await adminClient
       .from("user_roles")
-      .insert({ user_id: userId, role: "admin" });
+      .insert({ user_id: userId, role: assignedRole });
 
     if (insertError) {
-      console.error("Failed to insert admin role:", insertError);
+      console.error("Failed to insert role:", insertError);
       return new Response(JSON.stringify({ error: "Failed to assign role" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    console.log("Admin role granted to user:", userId);
-    return new Response(JSON.stringify({ success: true }), {
+    console.log(`Role '${assignedRole}' granted to user:`, userId);
+    return new Response(JSON.stringify({ success: true, role: assignedRole }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
