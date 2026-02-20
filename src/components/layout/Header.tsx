@@ -10,18 +10,21 @@ const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { language, setLanguage, t } = useLanguage();
   const { user, signOut } = useAuth();
-  const { isAdmin } = useAdmin();
+  const { isAdmin, loading: adminLoading } = useAdmin();
   const location = useLocation();
   const navigate = useNavigate();
 
-  const navLinks = [
+  const baseLinks = [
     { path: '/', label: t('nav.home') },
     { path: '/packages', label: t('nav.packages') },
     { path: '/rooms', label: t('nav.rooms') },
     { path: '/sessions', label: t('nav.sessions') },
     { path: '/lessons', label: t('nav.lessons') },
-    ...(isAdmin ? [{ path: '/admin', label: t('nav.admin') }] : []),
   ];
+  const adminLink = { path: '/admin', label: t('nav.admin') };
+  // Always include admin link in layout to prevent shift; hide via visibility
+  const showAdmin = isAdmin && !adminLoading;
+  const navLinks = [...baseLinks, ...(isAdmin || adminLoading ? [adminLink] : [])];
 
   const isActive = (path: string) => location.pathname === path;
   const toggleLanguage = () => setLanguage(language === 'en' ? 'zh' : 'en');
@@ -45,19 +48,25 @@ const Header = () => {
           </Link>
 
           <nav className="hidden md:flex items-center gap-1">
-            {navLinks.map((link) => (
-              <Link
-                key={link.path}
-                to={link.path}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                  isActive(link.path)
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
-                }`}
-              >
-                {link.label}
-              </Link>
-            ))}
+            {navLinks.map((link) => {
+              const isAdminLink = link.path === '/admin';
+              const hidden = isAdminLink && !showAdmin;
+              return (
+                <Link
+                  key={link.path}
+                  to={link.path}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                    isActive(link.path)
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
+                  } ${hidden ? 'invisible' : ''}`}
+                  tabIndex={hidden ? -1 : undefined}
+                  aria-hidden={hidden || undefined}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
           </nav>
 
           <div className="flex items-center gap-2">
@@ -88,7 +97,7 @@ const Header = () => {
         {isMenuOpen && (
           <nav className="md:hidden py-4 border-t border-border animate-fade-in">
             <div className="flex flex-col gap-1">
-              {navLinks.map((link) => (
+              {navLinks.filter(link => link.path !== '/admin' || showAdmin).map((link) => (
                 <Link
                   key={link.path}
                   to={link.path}
