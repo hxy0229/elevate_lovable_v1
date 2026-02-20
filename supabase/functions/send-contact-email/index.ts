@@ -6,10 +6,9 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Recipient email for contact form submissions
 const RECIPIENT_EMAIL = "david.huangxiangyuan@gmail.com";
 
-// Simple in-memory rate limiter (per IP, resets on function cold start)
+// Simple in-memory rate limiter
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT = 5;
 const RATE_WINDOW_MS = 60 * 60 * 1000;
@@ -73,39 +72,47 @@ serve(async (req) => {
       );
     }
 
-    // Send email notification via Lovable AI (Gemini)
-    const apiKey = Deno.env.get("LOVABLE_API_KEY");
-    if (apiKey) {
-      try {
-        // Use Supabase's built-in SMTP to send via the admin API
-        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-        const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const lessonsText = lessons.length > 0 ? lessons.join(", ") : "None specified";
 
-        // Format a nice email body
-        const lessonsText = lessons.length > 0 ? lessons.join(", ") : "None specified";
-        const emailBody = `
-New Contact Enquiry from Elevate Music Studio
+    const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+    if (!RESEND_API_KEY) {
+      console.error("RESEND_API_KEY is not configured");
+      return new Response(
+        JSON.stringify({ success: true }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
-Name: ${name}
-Phone: ${phone}
-Email: ${email}
-Lessons Interested In: ${lessonsText}
-Message: ${message || "No message provided"}
+    const htmlBody = `
+      <h2>New Contact Enquiry – Elevate Music Studio</h2>
+      <table style="border-collapse:collapse;font-family:sans-serif;">
+        <tr><td style="padding:6px 12px;font-weight:bold;">Name</td><td style="padding:6px 12px;">${name}</td></tr>
+        <tr><td style="padding:6px 12px;font-weight:bold;">Phone</td><td style="padding:6px 12px;">${phone}</td></tr>
+        <tr><td style="padding:6px 12px;font-weight:bold;">Email</td><td style="padding:6px 12px;"><a href="mailto:${email}">${email}</a></td></tr>
+        <tr><td style="padding:6px 12px;font-weight:bold;">Lessons</td><td style="padding:6px 12px;">${lessonsText}</td></tr>
+        <tr><td style="padding:6px 12px;font-weight:bold;">Message</td><td style="padding:6px 12px;">${message || "—"}</td></tr>
+      </table>
+    `;
 
----
-This is an automated notification from your website contact form.
-        `.trim();
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${RESEND_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: "Elevate Music <onboarding@resend.dev>",
+        to: [RECIPIENT_EMAIL],
+        subject: `New Enquiry from ${name}`,
+        html: htmlBody,
+      }),
+    });
 
-        console.log("Contact enquiry received — email would be sent to:", RECIPIENT_EMAIL);
-        console.log("Enquiry details:", { name, phone, email, lessons, message });
-      } catch (emailErr) {
-        console.error("Failed to send email notification:", emailErr);
-      }
+    if (!res.ok) {
+      const errBody = await res.text();
+      console.error(`Resend API error [${res.status}]:`, errBody);
     } else {
-      console.log("New contact enquiry received (no email service configured):", {
-        name, phone, email, lessons, message,
-        timestamp: new Date().toISOString(),
-      });
+      console.log("Email sent successfully to", RECIPIENT_EMAIL);
     }
 
     return new Response(
