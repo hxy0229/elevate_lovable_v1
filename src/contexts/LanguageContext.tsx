@@ -99,7 +99,7 @@ const translations: Record<Language, Record<string, string>> = {
     // Lessons
     "lessons.title": "Lessons & Programs",
     "lessons.subtitle": "Professional instruction across vocal, instrumental, and performance programs",
-    "lessons.vocal": "Vocal Training",
+    "lessons.vocal": "Vocal",
     "lessons.piano": "Piano",
     "lessons.guitar": "Guitar & Ukulele",
     "lessons.drums": "Drums",
