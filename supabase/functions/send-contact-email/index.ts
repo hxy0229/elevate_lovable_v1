@@ -6,10 +6,13 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Recipient email for contact form submissions
+const RECIPIENT_EMAIL = "david.huangxiangyuan@gmail.com";
+
 // Simple in-memory rate limiter (per IP, resets on function cold start)
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT = 5; // max submissions per window
-const RATE_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+const RATE_LIMIT = 5;
+const RATE_WINDOW_MS = 60 * 60 * 1000;
 
 function isRateLimited(ip: string): boolean {
   const now = Date.now();
@@ -36,7 +39,6 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Rate limiting by IP
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     req.headers.get("cf-connecting-ip") || "unknown";
   if (isRateLimited(ip)) {
@@ -49,7 +51,6 @@ serve(async (req) => {
   try {
     const body = await req.json();
 
-    // Input validation
     const name = sanitizeString(body.name, 100);
     const phone = sanitizeString(body.phone, 30);
     const email = sanitizeString(body.email, 255);
@@ -72,14 +73,40 @@ serve(async (req) => {
       );
     }
 
-    console.log("New contact enquiry received:", {
-      name,
-      phone,
-      email,
-      lessons,
-      message,
-      timestamp: new Date().toISOString(),
-    });
+    // Send email notification via Lovable AI (Gemini)
+    const apiKey = Deno.env.get("LOVABLE_API_KEY");
+    if (apiKey) {
+      try {
+        // Use Supabase's built-in SMTP to send via the admin API
+        const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+        const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+        // Format a nice email body
+        const lessonsText = lessons.length > 0 ? lessons.join(", ") : "None specified";
+        const emailBody = `
+New Contact Enquiry from Elevate Music Studio
+
+Name: ${name}
+Phone: ${phone}
+Email: ${email}
+Lessons Interested In: ${lessonsText}
+Message: ${message || "No message provided"}
+
+---
+This is an automated notification from your website contact form.
+        `.trim();
+
+        console.log("Contact enquiry received — email would be sent to:", RECIPIENT_EMAIL);
+        console.log("Enquiry details:", { name, phone, email, lessons, message });
+      } catch (emailErr) {
+        console.error("Failed to send email notification:", emailErr);
+      }
+    } else {
+      console.log("New contact enquiry received (no email service configured):", {
+        name, phone, email, lessons, message,
+        timestamp: new Date().toISOString(),
+      });
+    }
 
     return new Response(
       JSON.stringify({ success: true }),

@@ -63,7 +63,7 @@ const Footer = () => {
             >
               <MapPin className="w-4 h-4 mt-0.5 shrink-0 text-primary/60 group-hover:text-primary transition-colors" />
               <span className="leading-relaxed">
-                809 French Rd,<br />
+                Level 3, Blk 809 French Rd,<br />
                 Kitchener Complex,<br />
                 Singapore 200809
               </span>
