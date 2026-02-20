@@ -28,12 +28,6 @@ const Lessons = () => {
       image: 'https://images.unsplash.com/photo-1510915361894-db8b60106cb1?w=400',
     },
     {
-      id: 'ukulele',
-      name: language === 'zh' ? '尤克里里' : 'Ukulele',
-      icon: Guitar,
-      image: 'https://images.unsplash.com/photo-1556449895-a33c9dba33dd?w=400',
-    },
-    {
       id: 'violin',
       name: language === 'zh' ? '小提琴' : 'Violin',
       icon: Music,
@@ -44,12 +38,6 @@ const Lessons = () => {
       name: t('lessons.drums'),
       icon: Drum,
       image: 'https://images.unsplash.com/photo-1519892300165-cb5542fb47c7?w=400',
-    },
-    {
-      id: 'bass',
-      name: language === 'zh' ? '贝斯' : 'Bass',
-      icon: Music,
-      image: 'https://images.unsplash.com/photo-1605020420620-20c943cc4669?w=400',
     },
   ];
 

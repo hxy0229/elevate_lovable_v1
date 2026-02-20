@@ -71,15 +71,15 @@ const Footer = () => {
             <ul className="space-y-2 text-muted-foreground">
               <li>
                 <span className="font-medium">
-                  {language === 'en' ? 'Mon - Fri:' : '周一至周五:'}
+                  {language === 'en' ? 'Tue - Fri:' : '周二至周五:'}
                 </span>{' '}
-                10:00 - 22:00
+                6:00 PM - 10:30 PM
               </li>
               <li>
                 <span className="font-medium">
                   {language === 'en' ? 'Sat - Sun:' : '周六至周日:'}
                 </span>{' '}
-                09:00 - 23:00
+                11:30 AM - 10:30 PM
               </li>
             </ul>
           </div>

@@ -103,7 +103,7 @@ const SessionInstanceCard = ({
           </div>
           <div className="flex items-center gap-2 text-muted-foreground">
             <Clock className="w-4 h-4 text-primary" />
-            <span className="text-sm">{formatTime12h(instance.start_time)}</span>
+            <span className="text-sm">{formatTime12h(instance.start_time)} – {formatTime12h(instance.end_time)}</span>
           </div>
         </div>
 

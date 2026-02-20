@@ -63,14 +63,27 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
   const autoArrangedRef = useRef<Set<string>>(new Set());
 
   // Simplified create form — creates parent session + generates instances in one step
+  // Helper: add hours to a time string
+  const addHours = (time: string, hours: number) => {
+    const [h, m] = time.split(':').map(Number);
+    const totalM = (h + hours) * 60 + m;
+    const nh = Math.floor(totalM / 60) % 24;
+    const nm = totalM % 60;
+    return `${nh.toString().padStart(2, '0')}:${nm.toString().padStart(2, '0')}`;
+  };
+
   const [form, setForm] = useState({
     name: '',
     name_cn: '',
     day_of_week: '2',
     start_time: '19:30',
-    end_time: '21:30',
+    end_time: addHours('19:30', 3),
     recurrence_rule: 'weekly',
   });
+
+  const handleStartTimeChange = (newStart: string) => {
+    setForm(f => ({ ...f, start_time: newStart, end_time: addHours(newStart, 3) }));
+  };
 
   const profileMap = Object.fromEntries(profiles.map(p => [p.user_id, p.display_name]));
 
@@ -141,7 +154,7 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
     }
 
     setShowCreateForm(false);
-    setForm({ name: '', name_cn: '', day_of_week: '2', start_time: '19:30', end_time: '21:30', recurrence_rule: 'weekly' });
+    setForm({ name: '', name_cn: '', day_of_week: '2', start_time: '19:30', end_time: addHours('19:30', 3), recurrence_rule: 'weekly' });
     setCreating(false);
     await refetch();
   };
@@ -303,7 +316,11 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
               </div>
               <div className="space-y-1.5">
                 <label className="text-sm text-muted-foreground">{en ? 'Start Time' : '开始时间'}</label>
-                <Input type="time" value={form.start_time} onChange={e => setForm(f => ({ ...f, start_time: e.target.value }))} />
+                <Input type="time" value={form.start_time} onChange={e => handleStartTimeChange(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm text-muted-foreground">{en ? 'End Time' : '结束时间'}</label>
+                <Input type="time" value={form.end_time} onChange={e => setForm(f => ({ ...f, end_time: e.target.value }))} />
               </div>
               <div className="space-y-1.5">
                 <label className="text-sm text-muted-foreground flex items-center gap-1.5">
@@ -381,7 +398,7 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
                     </span>
                     <span className="text-sm text-muted-foreground flex items-center gap-1">
                       <Clock className="w-3.5 h-3.5" />
-                      {formatTime12h(instance.start_time)}
+                      {formatTime12h(instance.start_time)} – {formatTime12h(instance.end_time)}
                     </span>
                     {instanceWishes.length > 0 && (
                       <span className="text-xs text-muted-foreground">
