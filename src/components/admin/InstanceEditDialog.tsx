@@ -8,21 +8,22 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '@/components/ui/dialog';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { useSessionInstances, type SessionInstance } from '@/hooks/useSessionInstances';
+import type { SessionInstance } from '@/hooks/useSessionInstances';
 import { useToast } from '@/hooks/use-toast';
 
 interface InstanceEditDialogProps {
   instance: SessionInstance | null;
+  instances: SessionInstance[];
+  updateInstance: (id: string, updates: Record<string, any>) => Promise<{ error: any }>;
   onClose: () => void;
 }
 
 type EditScope = 'this' | 'following' | 'all';
 
-const InstanceEditDialog = ({ instance, onClose }: InstanceEditDialogProps) => {
+const InstanceEditDialog = ({ instance, instances, updateInstance, onClose }: InstanceEditDialogProps) => {
   const { language } = useLanguage();
   const en = language === 'en';
   const { toast } = useToast();
-  const { updateInstance, instances } = useSessionInstances();
 
   const [editScope, setEditScope] = useState<EditScope>('this');
   const [form, setForm] = useState(() => ({
@@ -61,7 +62,6 @@ const InstanceEditDialog = ({ instance, onClose }: InstanceEditDialogProps) => {
         onClose();
       }
     } else {
-      // Get sibling instances from same session
       const siblings = instances.filter(i => i.session_id === instance.session_id);
       let targets: SessionInstance[];
 
@@ -87,7 +87,6 @@ const InstanceEditDialog = ({ instance, onClose }: InstanceEditDialogProps) => {
     setSaving(false);
   };
 
-  // Check if this instance belongs to a series
   const siblingCount = instances.filter(i => i.session_id === instance.session_id).length;
   const isSeries = siblingCount > 1;
 
@@ -150,7 +149,7 @@ const InstanceEditDialog = ({ instance, onClose }: InstanceEditDialogProps) => {
             </div>
           </div>
 
-          {/* Edit Scope - only show for series */}
+          {/* Edit Scope */}
           {isSeries && (
             <div className="space-y-2 p-3 rounded-lg bg-secondary/30 border border-border">
               <Label className="font-semibold">{en ? 'Apply changes to:' : '应用更改到：'}</Label>

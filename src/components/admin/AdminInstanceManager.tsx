@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,7 @@ import {
 import {
   Plus, Trash2, Send, EyeOff, ChevronDown, ChevronUp,
   Clock, AlertTriangle, RefreshCw, Image, Edit2, ArrowUp, ArrowDown, Save, X, CheckSquare, Square,
+  GripVertical,
 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -59,8 +60,11 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
   const [creating, setCreating] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleteConfirm, setDeleteConfirm] = useState(false);
-  // Track which instances have already been auto-arranged this session
   const autoArrangedRef = useRef<Set<string>>(new Set());
+  // Drag-and-drop state
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+  const dragInstanceRef = useRef<string | null>(null);
 
   // Simplified create form — creates parent session + generates instances in one step
   // Helper: add hours to a time string
@@ -469,25 +473,48 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
                         {instanceWishes.map((wish, i) => {
                           const info = scheduleInfoMap[wish.id];
                           const hasConflict = info?.hasConflict;
+                          const isDragging = dragInstanceRef.current === instance.id && dragIdx === i;
+                          const isDragOver = dragInstanceRef.current === instance.id && dragOverIdx === i;
                           return (
-                            <div key={wish.id} className={`flex items-center ${hasConflict ? 'bg-destructive/5' : ''}`}>
-                              <div className="flex flex-col gap-0.5 pl-2">
-                                <Button variant="ghost" size="icon" className="h-5 w-5" disabled={i === 0}
-                                  onClick={async () => {
-                                    const ordered = instanceWishes.map((w, idx) => ({ id: w.id, sort_order: idx }));
-                                    [ordered[i].sort_order, ordered[i - 1].sort_order] = [ordered[i - 1].sort_order, ordered[i].sort_order];
-                                    await reorderWishes(ordered);
-                                  }}>
-                                  <ArrowUp className="w-3 h-3" />
-                                </Button>
-                                <Button variant="ghost" size="icon" className="h-5 w-5" disabled={i === instanceWishes.length - 1}
-                                  onClick={async () => {
-                                    const ordered = instanceWishes.map((w, idx) => ({ id: w.id, sort_order: idx }));
-                                    [ordered[i].sort_order, ordered[i + 1].sort_order] = [ordered[i + 1].sort_order, ordered[i].sort_order];
-                                    await reorderWishes(ordered);
-                                  }}>
-                                  <ArrowDown className="w-3 h-3" />
-                                </Button>
+                            <div
+                              key={wish.id}
+                              draggable
+                              onDragStart={() => { setDragIdx(i); dragInstanceRef.current = instance.id; }}
+                              onDragOver={(e) => { e.preventDefault(); if (dragInstanceRef.current === instance.id) setDragOverIdx(i); }}
+                              onDragEnd={async () => {
+                                if (dragIdx !== null && dragOverIdx !== null && dragIdx !== dragOverIdx && dragInstanceRef.current === instance.id) {
+                                  const reordered = [...instanceWishes];
+                                  const [moved] = reordered.splice(dragIdx, 1);
+                                  reordered.splice(dragOverIdx, 0, moved);
+                                  const ordered = reordered.map((w, idx) => ({ id: w.id, sort_order: idx }));
+                                  await reorderWishes(ordered);
+                                }
+                                setDragIdx(null);
+                                setDragOverIdx(null);
+                                dragInstanceRef.current = null;
+                              }}
+                              className={`flex items-center transition-colors cursor-grab active:cursor-grabbing ${hasConflict ? 'bg-destructive/5' : ''} ${isDragging ? 'opacity-40' : ''} ${isDragOver ? 'border-t-2 border-t-primary' : ''}`}
+                            >
+                              <div className="flex flex-col items-center gap-0.5 pl-2">
+                                <GripVertical className="w-4 h-4 text-muted-foreground" />
+                                <div className="flex flex-col gap-0.5">
+                                  <Button variant="ghost" size="icon" className="h-5 w-5" disabled={i === 0}
+                                    onClick={async () => {
+                                      const ordered = instanceWishes.map((w, idx) => ({ id: w.id, sort_order: idx }));
+                                      [ordered[i].sort_order, ordered[i - 1].sort_order] = [ordered[i - 1].sort_order, ordered[i].sort_order];
+                                      await reorderWishes(ordered);
+                                    }}>
+                                    <ArrowUp className="w-3 h-3" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" className="h-5 w-5" disabled={i === instanceWishes.length - 1}
+                                    onClick={async () => {
+                                      const ordered = instanceWishes.map((w, idx) => ({ id: w.id, sort_order: idx }));
+                                      [ordered[i].sort_order, ordered[i + 1].sort_order] = [ordered[i + 1].sort_order, ordered[i].sort_order];
+                                      await reorderWishes(ordered);
+                                    }}>
+                                    <ArrowDown className="w-3 h-3" />
+                                  </Button>
+                                </div>
                               </div>
                               <div className="flex-1 min-w-0">
                                 <WishCard
@@ -583,7 +610,12 @@ const AdminInstanceManager = ({ sessions, profiles }: AdminInstanceManagerProps)
       </Dialog>
 
       {editingInstance && (
-        <InstanceEditDialog instance={editingInstance} onClose={() => setEditingInstance(null)} />
+        <InstanceEditDialog
+          instance={editingInstance}
+          instances={instances}
+          updateInstance={updateInstance}
+          onClose={() => setEditingInstance(null)}
+        />
       )}
     </div>
   );
