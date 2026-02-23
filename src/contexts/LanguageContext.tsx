@@ -108,7 +108,7 @@ const translations: Record<Language, Record<string, string>> = {
     "lessons.priceNote": "Pricing based on student level assessment",
     "lessons.contactUs": "Contact us for pricing",
     "lessons.description":
-      "From classroom to stage, we offer a complete music growth system. Our courses cover solo, duet, choir singing and a wide range of instrumental programs including piano, orchestral, folk instruments, guitar, ukulele and drums. Students not only learn professional skills, but also get opportunities to participate in band performances, original music creation, grading exams, concerts, competitions, musical theatre, and personal IP branding — building confidence and shining on their own stage.",
+      "Whether you're picking up an instrument for the first time or preparing for the stage, we'll meet you where you are. Private lessons, group sessions, band rehearsals, grading prep, concerts — everything you need to grow as a musician, all under one roof.",
 
     // Profile
     "profile.title": "My Profile",
@@ -266,7 +266,7 @@ const translations: Record<Language, Record<string, string>> = {
     "lessons.priceNote": "价格根据学生水平评估确定",
     "lessons.contactUs": "联系我们了解价格",
     "lessons.description":
-      "从课堂到舞台，我们提供完整的音乐成长体系。课程涵盖独唱、对唱、合唱及多种器乐项目，如钢琴、管弦乐、民乐、吉他、尤克里里与架子鼓。学员不仅学习专业技巧，更有机会参与乐队演出、原创音乐创作、考级训练、音乐会与比赛、音乐舞台短剧及个人IP打造，在实践中建立自信，绽放属于自己的舞台魅力。",
+      "无论你是零基础入门还是备战舞台，我们都能为你量身定制。一对一课程、团体训练、乐队排练、考级辅导、演出机会——你的音乐成长之路，从这里开始。",
 
     // Profile
     "profile.title": "我的资料",
